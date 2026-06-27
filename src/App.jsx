@@ -18,8 +18,19 @@ import Login from './pages/Login';
 export default function App() {
   // Mengatur halaman pertama yang terbuka adalah Dashboard
   const [activeMenu, setActiveMenu] = useState('Dashboard');
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('simbokUser');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('simbokUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('simbokUser');
+    }
+  }, [currentUser]);
 
   const activeRole = currentUser?.peran || 'Pegawai';
 
