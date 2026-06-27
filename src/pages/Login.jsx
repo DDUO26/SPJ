@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Lock, User, LogIn, ShieldCheck, AlertCircle, Loader2, Plus, Zap, PieChart, Eye, EyeOff, Fingerprint } from 'lucide-react';
 import { ambilSemuaPenggunaDb, simpanPenggunaDb } from '../services/pengaturanService';
 import heroImg from '../assets/berkas_3d_v2.png';
-import { ambilSemuaPenggunaDb, simpanPenggunaDb } from '../services/pengaturanService';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
