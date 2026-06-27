@@ -104,47 +104,77 @@ export default function Verifikasi() {
   // ==========================================
   // Pencocokan Nama Pegawai & Sintesis SPJ
   // ==========================================
-  const getNamaResmi = (namaExcel) => {
-    if (!namaExcel) return null;
-    const target = String(namaExcel).trim().toLowerCase();
+
+  // Smart split: find registered pegawai names inside the raw string
+  // instead of naive split(',') which breaks credentials like "S.Kep", "Amd,Kep"
+  const splitPegawaiNames = (pegawaiStr) => {
+    if (!pegawaiStr) return [];
+    const str = String(pegawaiStr).trim();
+    if (!str) return [];
     
-    // 1. Exact match
-    let match = daftarPegawai.find(p => p.nama.toLowerCase().trim() === target);
-    if (match) return match.nama;
-
-    // 2. Excel name is substring of official name ("johnson" in "Johnson Munaiseche, Amd.kep")
-    match = daftarPegawai.find(p => p.nama.toLowerCase().includes(target));
-    if (match) return match.nama;
-
-    // 3. Official name is substring of Excel name
-    match = daftarPegawai.find(p => target.includes(p.nama.toLowerCase().trim()));
-    if (match) return match.nama;
-
-    return String(namaExcel).trim();
+    const results = [];
+    let remaining = str.toLowerCase();
+    
+    // Sort by name length descending so longest match wins first
+    const sortedPegawai = [...daftarPegawai].sort((a, b) => b.nama.length - a.nama.length);
+    
+    for (const peg of sortedPegawai) {
+      const pegLower = peg.nama.toLowerCase().trim();
+      const idx = remaining.indexOf(pegLower);
+      if (idx !== -1) {
+        results.push(peg.nama);
+        // Blank out matched portion to avoid double-matching
+        remaining = remaining.substring(0, idx) + ' '.repeat(pegLower.length) + remaining.substring(idx + pegLower.length);
+      }
+    }
+    
+    // Fallback: if no exact match, try matching by significant first name words
+    if (results.length === 0) {
+      const words = str.split(/[,\s]+/).filter(w => w.length > 3 && !/^(amd|skm|sst|str|kep|keb|s\.kep|ns|m\.p\.h|amkl|amkg|skg|dr|drg)$/i.test(w));
+      for (const word of words) {
+        const match = daftarPegawai.find(p => {
+          const pNameWords = p.nama.toLowerCase().split(/[ \-.,]+/);
+          return pNameWords.some(w => w.length > 3 && w === word.toLowerCase());
+        });
+        if (match && !results.includes(match.nama)) {
+          results.push(match.nama);
+        }
+      }
+    }
+    
+    return results;
   };
 
   const combinedSpjList = useMemo(() => {
-    // 1. Deduplicate real SPJs from DB (in case of double clicks)
     const list = [];
-    const spjSet = new Set();
     
     // Sort descending by createdAt or id so we keep the latest if duplicates exist
     const sortedSpj = [...daftarSpj].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     
-    sortedSpj.forEach(s => {
-      const key = `${s.pegawaiNama}_${s.tanggal}`;
-      if (!spjSet.has(key)) {
-        list.push(s);
-        spjSet.add(key);
+    // Normalize SPJ names to match master data if possible
+    const normalizedSpj = sortedSpj.map(s => {
+      const matchedNames = splitPegawaiNames(s.pegawaiNama);
+      if (matchedNames.length > 0 && matchedNames[0] !== s.pegawaiNama) {
+        // Use the mapped master name if it differs
+        return { ...s, pegawaiNama: matchedNames[0] };
       }
+      return s;
+    });
+
+    // Create a pool of Real SPJs grouped by Person_Date
+    const realSpjPool = {};
+    normalizedSpj.forEach(s => {
+      const key = `${s.pegawaiNama}_${s.tanggal}`;
+      if (!realSpjPool[key]) realSpjPool[key] = [];
+      realSpjPool[key].push(s);
     });
 
     daftarKegiatan.forEach(keg => {
       if (!keg.pegawai) return;
-      const pegawaiNames = keg.pegawai.split(',').map(p => getNamaResmi(p));
+      const pegawaiNames = splitPegawaiNames(keg.pegawai);
 
       // Build YYYY-MM-DD from keg.tanggal & keg.bulan
-      let dateString = null;
+      let datesToCreate = [];
       if (keg.bulan && keg.tanggal) {
         const blnSplit = String(keg.bulan).split(' ');
         const namaBulan = blnSplit[0].toUpperCase();
@@ -153,18 +183,31 @@ export default function Verifikasi() {
         
         if (monthIndex > 0) {
           const m = String(monthIndex).padStart(2, '0');
-          const d = String(keg.tanggal).padStart(2, '0');
-          dateString = `${thn}-${m}-${d}`;
+          // Extract any valid day numbers (1-31) from the text, handling "18 JUNI 2026" or "10 s.d 11"
+          const hariArray = (String(keg.tanggal).match(/\d+/g) || []).filter(h => {
+             const num = Number(h);
+             return num >= 1 && num <= 31;
+          });
+          hariArray.forEach(hari => {
+            const d = String(hari).padStart(2, '0');
+            datesToCreate.push(`${thn}-${m}-${d}`);
+          });
         }
       }
 
-      if (dateString) {
+      datesToCreate.forEach(dateString => {
         pegawaiNames.forEach(namaResmi => {
           if (!namaResmi) return;
           const key = `${namaResmi}_${dateString}`;
-          if (!spjSet.has(key)) {
+          
+          if (realSpjPool[key] && realSpjPool[key].length > 0) {
+            // Consume one Real SPJ from the pool
+            const realSpj = realSpjPool[key].shift();
+            list.push({ ...realSpj, isVirtualMerged: true });
+          } else {
+            // No Real SPJ available, push Virtual SPJ
             list.push({
-              id: `virtual_${keg.id}_${namaResmi}`,
+              id: `virtual_${keg.id}_${namaResmi}_${dateString}`,
               pegawaiNama: namaResmi,
               tanggal: dateString,
               program: keg.program || '(Umum)',
@@ -173,10 +216,16 @@ export default function Verifikasi() {
               catatan: '',
               isVirtual: true
             });
-            spjSet.add(key);
           }
         });
-      }
+      });
+    });
+
+    // Add any remaining Real SPJs that didn't match a Virtual SPJ
+    Object.values(realSpjPool).forEach(spjs => {
+      spjs.forEach(spj => {
+        list.push(spj);
+      });
     });
 
     return list;
@@ -875,11 +924,12 @@ export default function Verifikasi() {
                                           return (
                                             <div
                                               key={si}
+                                              onClick={(e) => { e.stopPropagation(); openEditModalSingle(spj.id); }}
                                               title={`${spj.day}/${idx + 1} — ${st === 'lengkap' ? 'Lengkap' : st === 'kurang' ? 'Kurang' : 'Belum'}`}
-                                              className={`w-full py-1 rounded text-[10px] font-bold flex items-center justify-center text-center px-1 ${
-                                                st === 'lengkap' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                                                st === 'kurang' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                                                'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                              className={`w-full py-1 rounded text-[10px] font-bold flex items-center justify-center text-center px-1 cursor-pointer transition-all hover:scale-105 hover:shadow-sm ${
+                                                st === 'lengkap' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30' :
+                                                st === 'kurang' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30' :
+                                                'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
                                               }`}
                                             >
                                               {String(spj.day).padStart(2, '0')}/{String(idx + 1).padStart(2, '0')}
@@ -1025,21 +1075,24 @@ export default function Verifikasi() {
                   return (
                     <div
                       key={spj.id}
-                      onClick={() => toggleSpjSelection(spj.id)}
-                      className={`rounded-xl p-3 border text-xs cursor-pointer transition-all ${
+                      onClick={() => openEditModalSingle(spj.id)}
+                      className={`rounded-xl p-3 border text-xs cursor-pointer transition-all hover:shadow-md ${
                         isChecked ? 'border-blue-500 bg-blue-500/10' :
-                        st === 'lengkap' ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50' :
-                        st === 'kurang' && spj.catatan ? 'bg-gradient-to-r from-amber-500/10 to-rose-500/10 border-amber-500/30 hover:border-amber-500/50' :
-                        st === 'kurang' ? 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50' :
-                        'bg-rose-500/10 border-rose-500/30 hover:border-rose-500/50'
+                        st === 'lengkap' ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50 hover:bg-emerald-500/20' :
+                        st === 'kurang' && spj.catatan ? 'bg-gradient-to-r from-amber-500/10 to-rose-500/10 border-amber-500/30 hover:border-amber-500/50 hover:from-amber-500/20 hover:to-rose-500/20' :
+                        st === 'kurang' ? 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/20' :
+                        'bg-rose-500/10 border-rose-500/30 hover:border-rose-500/50 hover:bg-rose-500/20'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
-                            isChecked ? 'bg-blue-500 border-blue-500' : 'border-slate-500'
-                          }`}>
-                            {isChecked && <CheckCircle size={10} className="text-white" />}
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); toggleSpjSelection(spj.id); }}
+                            className={`w-4 h-4 rounded border flex items-center justify-center transition-all hover:scale-110 ${
+                              isChecked ? 'bg-blue-500 border-blue-500 shadow-sm shadow-blue-500/40' : 'border-slate-400 hover:border-blue-400 bg-slate-800'
+                            }`}
+                          >
+                            {isChecked && <CheckCircle size={12} className="text-white" />}
                           </div>
                           <span className="font-bold text-slate-200">{spj.tanggal}</span>
                         </div>
@@ -1118,7 +1171,7 @@ export default function Verifikasi() {
       {/* ============================================================ */}
       {isBulkEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm print:hidden">
-          <div className="bg-[#0F172A] w-[400px] rounded-2xl shadow-2xl border border-slate-700 flex flex-col overflow-hidden">
+          <div className="bg-[#0F172A] w-[850px] max-w-[95vw] rounded-2xl shadow-2xl border border-slate-700 flex flex-col overflow-hidden">
             <div className="p-4 border-b border-slate-700 flex items-center justify-between">
               <h3 className="font-bold text-white flex items-center gap-2">
                 <FileText size={16} className="text-blue-400" /> Edit {selectedSpjsForEdit.length} Data SPJ
@@ -1129,21 +1182,39 @@ export default function Verifikasi() {
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block">Ceklist Kelengkapan</label>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-[10px] font-bold uppercase text-slate-400">Ceklist Kelengkapan</label>
+                  <button
+                    onClick={() => {
+                      const isAllChecked = CHECKLIST_ITEMS.every(i => bulkEditChecklist[i.key]);
+                      const newVal = {};
+                      const newApply = { ...bulkEditApplyChecklist };
+                      CHECKLIST_ITEMS.forEach(i => {
+                        newVal[i.key] = !isAllChecked;
+                        if (!isAllChecked) newApply[i.key] = true;
+                      });
+                      setBulkEditChecklist(newVal);
+                      if (!isAllChecked) setBulkEditApplyChecklist(newApply);
+                    }}
+                    className="text-[10px] font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors bg-blue-500/10 px-2 py-1 rounded"
+                  >
+                    <CheckCircle size={12} /> {CHECKLIST_ITEMS.every(i => bulkEditChecklist[i.key]) ? 'BATAL CEK SEMUA' : 'CEK SEMUA'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {CHECKLIST_ITEMS.map(item => (
-                    <div key={item.key} className="flex items-center gap-3 bg-slate-800/60 p-2 rounded-lg border border-slate-700/50">
-                      <label className="flex items-center gap-2 text-xs font-bold text-slate-400 cursor-pointer">
+                    <div key={item.key} className="flex flex-col gap-2 bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                      <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={bulkEditApplyChecklist[item.key] || false}
                           onChange={(e) => setBulkEditApplyChecklist(prev => ({ ...prev, [item.key]: e.target.checked }))}
                           className="rounded border-slate-600 text-blue-500 focus:ring-blue-500 bg-slate-700 w-3.5 h-3.5"
                         />
-                        Ubah
+                        Ubah Status
                       </label>
                       <label
-                        className={`flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer transition-all text-xs font-medium ${
+                        className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all text-xs font-medium ${
                           !bulkEditApplyChecklist[item.key] ? 'opacity-40 pointer-events-none bg-slate-800 text-slate-500' :
                           bulkEditChecklist[item.key]
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
@@ -1161,7 +1232,7 @@ export default function Verifikasi() {
                         }`}>
                           {bulkEditChecklist[item.key] && <CheckCircle size={10} className="text-white" />}
                         </div>
-                        {item.label}
+                        <span className="truncate">{item.label}</span>
                       </label>
                     </div>
                   ))}

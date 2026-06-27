@@ -56,44 +56,94 @@ export default function HasilPemeriksaan() {
     setLoading(false);
   };
 
-  const getNamaResmi = (namaExcel) => {
-    if (!namaExcel) return null;
-    const target = String(namaExcel).trim().toLowerCase();
-    let match = daftarPegawai.find(p => p.nama.toLowerCase().trim() === target);
-    if (match) return match.nama;
-    match = daftarPegawai.find(p => p.nama.toLowerCase().includes(target));
-    if (match) return match.nama;
-    match = daftarPegawai.find(p => target.includes(p.nama.toLowerCase().trim()));
-    if (match) return match.nama;
-    return String(namaExcel).trim();
+  // Smart split: find registered pegawai names inside the raw string
+  // instead of naive split(',') which breaks credentials like "S.Kep", "Amd,Kep"
+  const splitPegawaiNames = (pegawaiStr) => {
+    if (!pegawaiStr) return [];
+    const str = String(pegawaiStr).trim();
+    if (!str) return [];
+    
+    const results = [];
+    let remaining = str.toLowerCase();
+    
+    // Sort by name length descending so longest match wins first
+    const sortedPegawai = [...daftarPegawai].sort((a, b) => b.nama.length - a.nama.length);
+    
+    for (const peg of sortedPegawai) {
+      const pegLower = peg.nama.toLowerCase().trim();
+      const idx = remaining.indexOf(pegLower);
+      if (idx !== -1) {
+        results.push(peg.nama);
+        // Blank out matched portion to avoid double-matching
+        remaining = remaining.substring(0, idx) + ' '.repeat(pegLower.length) + remaining.substring(idx + pegLower.length);
+      }
+    }
+    
+    // Fallback: if no exact match, try matching by significant first name words
+    if (results.length === 0) {
+      const words = str.split(/[,\s]+/).filter(w => w.length > 3 && !/^(amd|skm|sst|str|kep|keb|s\.kep|ns|m\.p\.h|amkl|amkg|skg|dr|drg)$/i.test(w));
+      for (const word of words) {
+        const match = daftarPegawai.find(p => {
+          const pNameWords = p.nama.toLowerCase().split(/[ \-.,]+/);
+          return pNameWords.some(w => w.length > 3 && w === word.toLowerCase());
+        });
+        if (match && !results.includes(match.nama)) {
+          results.push(match.nama);
+        }
+      }
+    }
+    
+    return results;
   };
 
   const combinedSpjList = useMemo(() => {
-    const list = [...daftarSpj];
-    const spjSet = new Set(list.map(s => `${s.pegawaiNama}_${s.tanggal}`));
+    const list = [];
+    
+    // Create a pool of Real SPJs grouped by Person_Date
+    const realSpjPool = {};
+    daftarSpj.forEach(s => {
+      const key = `${s.pegawaiNama}_${s.tanggal}`;
+      if (!realSpjPool[key]) realSpjPool[key] = [];
+      realSpjPool[key].push(s);
+    });
 
     daftarKegiatan.forEach(keg => {
       if (!keg.pegawai) return;
-      const pegawaiNames = keg.pegawai.split(',').map(p => getNamaResmi(p));
-      let dateString = null;
+      const pegawaiNames = splitPegawaiNames(keg.pegawai);
+      let datesToCreate = [];
       if (keg.bulan && keg.tanggal) {
         const blnSplit = String(keg.bulan).split(' ');
         const namaBulan = blnSplit[0].toUpperCase();
         const thn = blnSplit[1] || new Date().getFullYear();
         const monthIndex = BULAN_FULL.findIndex(b => b === namaBulan) + 1;
+        
         if (monthIndex > 0) {
           const m = String(monthIndex).padStart(2, '0');
-          const d = String(keg.tanggal).padStart(2, '0');
-          dateString = `${thn}-${m}-${d}`;
+          // Extract any valid day numbers (1-31) from the text, handling "18 JUNI 2026" or "10 s.d 11"
+          const hariArray = (String(keg.tanggal).match(/\d+/g) || []).filter(h => {
+             const num = Number(h);
+             return num >= 1 && num <= 31;
+          });
+          hariArray.forEach(hari => {
+            const d = String(hari).padStart(2, '0');
+            datesToCreate.push(`${thn}-${m}-${d}`);
+          });
         }
       }
-      if (dateString) {
+
+      datesToCreate.forEach(dateString => {
         pegawaiNames.forEach(namaResmi => {
           if (!namaResmi) return;
           const key = `${namaResmi}_${dateString}`;
-          if (!spjSet.has(key)) {
+          
+          if (realSpjPool[key] && realSpjPool[key].length > 0) {
+            // Consume one Real SPJ from the pool
+            const realSpj = realSpjPool[key].shift();
+            list.push({ ...realSpj, isVirtualMerged: true });
+          } else {
+            // No Real SPJ available, push Virtual SPJ
             list.push({
-              id: `virtual_${keg.id}_${namaResmi}`,
+              id: `virtual_${keg.id}_${namaResmi}_${dateString}`,
               pegawaiNama: namaResmi,
               tanggal: dateString,
               program: keg.program || '(Umum)',
@@ -102,11 +152,18 @@ export default function HasilPemeriksaan() {
               catatan: '',
               isVirtual: true
             });
-            spjSet.add(key);
           }
         });
-      }
+      });
     });
+
+    // Add any remaining Real SPJs that didn't match a Virtual SPJ
+    Object.values(realSpjPool).forEach(spjs => {
+      spjs.forEach(spj => {
+        list.push(spj);
+      });
+    });
+
     return list;
   }, [daftarSpj, daftarKegiatan, daftarPegawai]);
 
@@ -153,26 +210,29 @@ export default function HasilPemeriksaan() {
         const mySpj = filteredSpj.filter(s => s.pegawaiNama === peg.nama);
         let totalKegiatan = mySpj.length;
         let totalDana = 0;
-        let berkasKurang = 0;
-        let totalBerkasRequired = totalKegiatan * 8; 
+        let spjKurang = 0;
+        let spjBelum = 0;
+        let spjLengkap = 0;
         
         mySpj.forEach(spj => {
            totalDana += Number(spj.anggaran) || 0;
            const cl = spj.checklist || {};
-           const missing = CHECKLIST_ITEMS.filter(item => !cl[item.key]).length;
-           berkasKurang += missing;
+           const filled = Object.values(cl).filter(v => v).length;
+           if (filled === 8) spjLengkap++;
+           else if (filled > 0) spjKurang++;
+           else spjBelum++;
         });
 
-        const berkasTerkumpul = totalBerkasRequired - berkasKurang;
-        let persentase = totalBerkasRequired === 0 ? 0 : Math.round((berkasTerkumpul / totalBerkasRequired) * 100);
+        let persentase = totalKegiatan === 0 ? 0 : Math.round((spjLengkap / totalKegiatan) * 100);
         
         let status = 'Lengkap';
-        if (berkasKurang > 0 && berkasKurang <= 5) status = 'Perlu Revisi';
-        if (berkasKurang > 5) status = 'Belum Lengkap';
+        if (spjKurang > 0) status = 'Perlu Revisi';
+        if (spjBelum > 0 && spjLengkap === 0) status = 'Belum Lengkap';
 
         if (totalKegiatan === 0) {
            status = 'Tidak Ada Kegiatan';
-           berkasKurang = 0;
+           spjKurang = 0;
+           spjBelum = 0;
            persentase = 0;
         }
 
@@ -182,7 +242,8 @@ export default function HasilPemeriksaan() {
            jabatan: peg.jabatanFungsional || peg.golongan || 'Pegawai',
            totalKegiatan,
            totalDana,
-           berkasKurang,
+           berkasKurang: spjKurang,
+           belumInput: spjBelum,
            persentase,
            status
         };
@@ -201,9 +262,9 @@ export default function HasilPemeriksaan() {
      }
 
      if (sortOrder === 'Terbanyak Kurang') {
-        res = res.sort((a,b) => b.berkasKurang - a.berkasKurang);
+        res = res.sort((a,b) => (b.berkasKurang + b.belumInput) - (a.berkasKurang + a.belumInput));
      } else if (sortOrder === 'Paling Lengkap') {
-        res = res.sort((a,b) => a.berkasKurang - b.berkasKurang);
+        res = res.sort((a,b) => (a.berkasKurang + a.belumInput) - (b.berkasKurang + b.belumInput));
      }
 
      return res;
@@ -281,22 +342,22 @@ export default function HasilPemeriksaan() {
        };
     });
 
-    const totalRequired = peg.totalKegiatan * 8;
-    const totalChecked = kelengkapanList.reduce((sum, item) => {
-      return sum + parseInt(item.jumlah.split(' / ')[0], 10);
-    }, 0);
-    const overallPct = totalRequired === 0 ? 100 : Math.round((totalChecked / totalRequired) * 100);
+    const totalRequired = peg.totalKegiatan;
+    const totalChecked = totalRequired - peg.berkasKurang - peg.belumInput;
+    const overallPct = peg.persentase;
     const overallStatus = overallPct === 100 ? 'Lengkap' : 'Belum Lengkap';
     const statusBg = overallPct === 100 ? 'bg-emerald-500' : 'bg-rose-500';
 
     // 4 Cards
     let spjLengkap = 0;
     let spjKurang = 0;
+    let spjBelum = 0;
     let spjRevisi = 0;
     mySpj.forEach(s => {
        const checkedItems = Object.values(s.checklist || {}).filter(Boolean).length;
        if (checkedItems === 8) spjLengkap++;
-       else spjKurang++;
+       else if (checkedItems > 0) spjKurang++;
+       else spjBelum++;
        
        if (s.catatan && s.catatan.trim() !== '') spjRevisi++;
     });
@@ -305,28 +366,28 @@ export default function HasilPemeriksaan() {
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:hidden animate-in fade-in duration-200">
         <div className="bg-slate-50 rounded-[2rem] w-full max-w-6xl shadow-2xl flex flex-col h-[90vh] overflow-hidden">
            {/* Modal Header */}
-           <div className="flex justify-between items-center p-6 bg-white border-b border-slate-100">
-              <div className="flex items-center gap-4">
-                 <div className={`w-14 h-14 rounded-full text-white flex items-center justify-center font-bold text-xl ${getAvatarColor(peg.nama)} shadow-sm`}>
+           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-6 gap-3 sm:gap-0 bg-white border-b border-slate-100 relative shrink-0">
+              <div className="flex items-center gap-3 pr-10">
+                 <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white flex items-center justify-center font-bold text-lg sm:text-xl ${getAvatarColor(peg.nama)} shadow-sm shrink-0`}>
                     {getInitials(peg.nama)}
                  </div>
                  <div>
-                    <h3 className="text-xl font-bold text-slate-800">{peg.nama}</h3>
-                    <p className="text-sm text-slate-500 mt-0.5 font-medium">{peg.jabatan} • <span className="font-bold text-indigo-600 uppercase">{selectedBulan === 'ALL' ? 'Semua Bulan' : selectedBulan}</span></p>
+                    <h3 className="text-base sm:text-xl font-bold text-slate-800 leading-tight mb-0.5">{peg.nama}</h3>
+                    <p className="text-[11px] sm:text-sm text-slate-500 font-medium leading-tight">{peg.jabatan} • <span className="font-bold text-indigo-600 uppercase">{selectedBulan === 'ALL' ? 'Semua Bulan' : selectedBulan}</span></p>
                  </div>
               </div>
-              <div className="flex items-center gap-3">
-                 <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 flex items-center gap-2 shadow-sm">
-                    <AlertCircle size={16} /> Cetak Ringkasan
-                 </button>
-                 <button onClick={() => { setSelectedPegawaiDetail(null); setDetailKekurangan(null); }} className="p-2.5 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 text-slate-400 transition-colors shadow-sm">
-                    <XCircle size={20}/>
+              <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 pr-0 sm:pr-14">
+                 <button className="flex-1 sm:flex-none justify-center px-3 py-2 bg-white border border-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl hover:bg-slate-50 flex items-center gap-1.5 shadow-sm">
+                    <AlertCircle size={14} /> Cetak Ringkasan
                  </button>
               </div>
+              <button onClick={() => { setSelectedPegawaiDetail(null); setDetailKekurangan(null); }} className="absolute top-4 sm:top-6 right-4 sm:right-6 p-2 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 text-slate-400 transition-colors shadow-sm">
+                 <XCircle size={18}/>
+              </button>
            </div>
 
            {/* Modal Body */}
-           <div className="flex-1 overflow-hidden flex flex-col lg:flex-row gap-6 p-6">
+           <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row gap-4 sm:gap-6 p-4 sm:p-6 scrollbar-thin">
               {/* Sidebar Kiri */}
               <div className="w-full lg:w-[320px] shrink-0 flex flex-col gap-6 overflow-y-auto pr-2 scrollbar-thin">
                  {/* Status Kelengkapan Merah/Hijau */}
@@ -346,7 +407,7 @@ export default function HasilPemeriksaan() {
                           <span className="text-[7px] font-medium relative z-10 leading-none">Lengkap</span>
                        </div>
                     </div>
-                    <p className="text-xs font-medium mb-5 opacity-90">{totalChecked} dari {totalRequired} berkas lengkap</p>
+                    <p className="text-xs font-medium mb-5 opacity-90">{totalChecked} dari {totalRequired} SPJ kegiatan lengkap</p>
                     
                     <div className="bg-white rounded-2xl p-4 flex justify-between text-slate-800 shadow-sm">
                        <div className="text-center">
@@ -358,8 +419,8 @@ export default function HasilPemeriksaan() {
                           <p className="text-[9px] font-semibold text-slate-400 uppercase mt-0.5">Total Dana SPJ</p>
                        </div>
                        <div className="text-center">
-                          <p className="text-lg font-black text-rose-500">{peg.berkasKurang}</p>
-                          <p className="text-[9px] font-semibold text-slate-400 uppercase mt-0.5">Berkas Kurang</p>
+                          <p className="text-lg font-black text-rose-500">{peg.berkasKurang + peg.belumInput}</p>
+                          <p className="text-[9px] font-semibold text-slate-400 uppercase mt-0.5">SPJ Belum Lengkap</p>
                        </div>
                     </div>
                  </div>
@@ -393,8 +454,8 @@ export default function HasilPemeriksaan() {
                  </div>
               </div>
 
-              {/* Konten Kanan */}
-              <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+              {/* Konten Kanan (Dibuat agar bisa di-scroll terpisah di desktop) */}
+              <div className="flex-1 flex flex-col gap-4 sm:gap-6 overflow-visible lg:overflow-hidden">
                  {/* Ringkasan Kelengkapan (Top) */}
                  <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col xl:flex-row gap-6">
                     <div className="flex-1">
@@ -414,8 +475,8 @@ export default function HasilPemeriksaan() {
                           </div>
                           <div className="bg-indigo-50 rounded-2xl p-4 text-center border border-indigo-100">
                              <div className="bg-indigo-500 text-white w-6 h-6 rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm"><FileX size={14}/></div>
-                             <p className="text-xl font-black text-slate-800">0</p>
-                             <p className="text-[10px] font-bold text-slate-500 mt-1">Dalam Proses</p>
+                             <p className="text-xl font-black text-slate-800">{spjBelum}</p>
+                             <p className="text-[10px] font-bold text-slate-500 mt-1">Belum Input</p>
                           </div>
                           <div className="bg-amber-50 rounded-2xl p-4 text-center border border-amber-100">
                              <div className="bg-amber-500 text-white w-6 h-6 rounded-full flex items-center justify-center mx-auto mb-2 shadow-sm"><AlertCircle size={14}/></div>
@@ -435,15 +496,15 @@ export default function HasilPemeriksaan() {
                               <span className="text-emerald-500 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Lengkap ({spjLengkap})</span>
                            </div>
                            <div className="flex justify-between items-center text-[10px] font-bold">
-                              <span className="text-rose-500 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500"></div> Kurang ({spjKurang})</span>
+                              <span className="text-rose-500 flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500"></div> Kurang ({spjKurang + spjBelum})</span>
                            </div>
                         </div>
-                    </div>
-                 </div>
+                     </div>
+                  </div>
 
-                 {/* Tab Navigation & Table */}
-                 <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-                    <div className="flex gap-6 px-6 border-b border-slate-100 pt-2 shrink-0">
+                  {/* Tab Navigation & Table */}
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]">
+                     <div className="flex gap-4 sm:gap-6 px-4 sm:px-6 border-b border-slate-100 pt-2 shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none">
                        {['Daftar Kelengkapan', `Daftar Kegiatan (${peg.totalKegiatan})`, 'Catatan Verifikasi', 'Riwayat Perubahan'].map(tab => (
                           <button 
                              key={tab}
@@ -456,9 +517,9 @@ export default function HasilPemeriksaan() {
                        ))}
                     </div>
                     <div className="flex-1 overflow-y-auto p-0 scrollbar-thin">
-                       {activeTab === 'Daftar Kelengkapan' && (
-                          <div className="relative h-full min-h-[300px]">
-                             <table className="w-full text-left text-sm text-slate-600">
+                        {activeTab === 'Daftar Kelengkapan' && (
+                           <div className="relative h-full overflow-x-auto pb-4">
+                              <table className="w-full text-left text-sm text-slate-600 min-w-[700px]">
                                 <thead className="bg-slate-50/50 text-[11px] uppercase font-bold text-slate-400 sticky top-0 z-10 backdrop-blur-md">
                                    <tr>
                                       <th className="px-6 py-4 border-b border-slate-100">No.</th>
@@ -546,9 +607,9 @@ export default function HasilPemeriksaan() {
               </div>
            </div>
            {/* Footer */}
-           <div className="p-5 bg-white border-t border-slate-100 flex justify-between items-center shrink-0">
-              <p className="text-xs font-medium text-slate-500 flex items-center gap-2"><AlertCircle size={14}/> Data diperbarui terakhir pada {new Date().toLocaleString('id-ID')}</p>
-              <button onClick={() => { setSelectedPegawaiDetail(null); setDetailKekurangan(null); }} className="px-8 py-2.5 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors shadow-md">
+           <div className="p-4 sm:p-5 bg-white border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+              <p className="text-[10px] sm:text-xs font-medium text-slate-500 flex items-center gap-1.5 text-center sm:text-left"><AlertCircle size={14} className="shrink-0"/> Data diperbarui pada {new Date().toLocaleString('id-ID')}</p>
+              <button onClick={() => { setSelectedPegawaiDetail(null); setDetailKekurangan(null); }} className="w-full sm:w-auto px-8 py-2.5 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 transition-colors shadow-md">
                  Tutup
               </button>
            </div>
@@ -715,9 +776,10 @@ export default function HasilPemeriksaan() {
             </div>
          ) : (
             filteredPegawaiStats.map(peg => {
-               const isCritical = peg.berkasKurang > 5; // Use critical red styling like in mockup for high missing count
-               const isGreen = peg.berkasKurang === 0 || peg.status === 'Lengkap';
-               const isYellow = peg.berkasKurang > 0 && peg.berkasKurang <= 5 && !isCritical;
+               const totalKurang = peg.berkasKurang + peg.belumInput;
+               const isCritical = totalKurang > 5;
+               const isGreen = totalKurang === 0 || peg.status === 'Lengkap';
+               const isYellow = totalKurang > 0 && totalKurang <= 5 && !isCritical;
                
                let cardClass = "bg-white border-slate-200";
                let nameClass = "text-slate-800";
@@ -779,8 +841,8 @@ export default function HasilPemeriksaan() {
 
                         {/* Berkas Kurang */}
                         <div className={`flex flex-col items-center justify-center min-w-[65px] h-[55px] rounded-xl ${kuranBg} ${bellClass}`}>
-                           <span className="text-xl font-black leading-none">{peg.berkasKurang}</span>
-                           <span className="text-[9px] font-bold mt-1 text-center leading-tight">Berkas<br/>Kurang</span>
+                           <span className="text-xl font-black leading-none">{totalKurang}</span>
+                           <span className="text-[9px] font-bold mt-1 text-center leading-tight">Belum<br/>Lengkap</span>
                         </div>
                      </div>
                      {/* Mobile Progress Bar */}

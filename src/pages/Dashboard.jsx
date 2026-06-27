@@ -15,8 +15,8 @@ import HasilPemeriksaan from '../components/HasilPemeriksaan';
 import AktivitasTerbaru from '../components/AktivitasTerbaru';
 import { ambilSemuaSpjDb } from '../services/spjService';
 
-export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('statistik'); // 'statistik' | 'pemeriksaan'
+export default function Dashboard({ activeRole }) {
+  const [activeTab, setActiveTab] = useState(activeRole === 'Pegawai' ? 'pemeriksaan' : 'statistik'); // 'statistik' | 'pemeriksaan'
   const [daftarSpj, setDaftarSpj] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('ALL');
 
@@ -112,7 +112,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       
       {/* Tab Navigation */}
-      <div className="flex space-x-2 border-b border-slate-200 pb-2 mb-6">
+      <div className="flex space-x-2 border-b border-slate-200 pb-2 mb-6 overflow-x-auto scrollbar-none whitespace-nowrap">
         <button
           onClick={() => setActiveTab('statistik')}
           className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${

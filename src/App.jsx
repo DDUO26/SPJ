@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Home, FileText, Activity, Database, Folder, 
   CheckCircle, Hospital, BarChart2, Settings, 
-  ChevronDown, Bell, Calendar, LogOut
+  ChevronDown, Bell, Calendar, LogOut, Menu, X
 } from 'lucide-react';
 
 // Memanggil 3 Ruangan yang sudah kita buat
@@ -19,6 +19,7 @@ export default function App() {
   // Mengatur halaman pertama yang terbuka adalah Dashboard
   const [activeMenu, setActiveMenu] = useState('Dashboard');
   const [currentUser, setCurrentUser] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const activeRole = currentUser?.peran || 'Pegawai';
 
@@ -62,10 +63,18 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden w-full">
+    <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden w-full relative">
       
-      {/* SIDEBAR (MENU KIRI) - print:hidden akan menyembunyikan ini saat di-print */}
-      <div className="w-[260px] bg-[#0B1120] text-white flex flex-col justify-between shrink-0 print:hidden">
+      {/* OVERLAY UNTUK MOBILE MENU */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* SIDEBAR (MENU KIRI) */}
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] bg-[#0B1120] text-white flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} print:hidden`}>
         <div>
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -83,8 +92,14 @@ export default function App() {
                 <p className="text-[7px] text-slate-400 uppercase tracking-widest leading-tight mt-1">Bantuan Operasional<br/>Kesehatan</p>
               </div>
             </div>
-            <button className="bg-slate-800 text-slate-400 hover:text-white p-1.5 rounded-full transition-colors">
+            <button className="hidden lg:block bg-slate-800 text-slate-400 hover:text-white p-1.5 rounded-full transition-colors">
               <ChevronDown size={14} className="rotate-90" />
+            </button>
+            <button 
+              className="lg:hidden bg-slate-800 text-slate-400 hover:text-white p-1.5 rounded-xl transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <X size={18} />
             </button>
           </div>
 
@@ -92,7 +107,10 @@ export default function App() {
             {filteredMenuItems.map((item) => (
               <button
                 key={item.name}
-                onClick={() => setActiveMenu(item.name)}
+                onClick={() => {
+                  setActiveMenu(item.name);
+                  setIsMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl transition-all duration-300 ${
                   activeMenu === item.name 
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
@@ -138,18 +156,26 @@ export default function App() {
       </div>
 
       {/* AREA KONTEN UTAMA */}
-      <div className="flex-1 overflow-auto w-full bg-slate-50 relative print:overflow-visible print:bg-white">
+      <div className="flex-1 overflow-auto w-full bg-slate-50 relative print:overflow-visible print:bg-white flex flex-col">
         
-        {/* HEADER ATAS - print:hidden akan menyembunyikan ini saat di-print */}
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-20 px-8 py-5 flex justify-between items-center border-b border-slate-200 print:hidden">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              Selamat datang, {currentUser.nama} <span className="text-xl">👋</span>
-            </h2>
-            <p className="text-slate-500 text-sm mt-1">Kelola data BOK dengan mudah dan akurat</p>
-          </div>
+        {/* HEADER ATAS */}
+        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 py-4 md:py-5 flex justify-between items-center border-b border-slate-200 print:hidden">
           <div className="flex items-center gap-4">
-             <div className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 -ml-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
+            >
+              <Menu size={20} />
+            </button>
+            <div>
+              <h2 className="text-lg md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+                Halo, {currentUser.nama.split(' ')[0]} <span className="text-xl hidden sm:inline">👋</span>
+              </h2>
+              <p className="text-slate-500 text-xs md:text-sm mt-0.5 hidden sm:block">Kelola data BOK dengan mudah dan akurat</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
+             <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-200 px-3 md:px-4 py-2 rounded-xl shadow-sm">
                 <Calendar size={16} className="text-slate-400" />
                 <span className="text-sm font-semibold text-slate-700">Tahun Anggaran 2025</span>
                 <ChevronDown size={16} className="text-slate-400 ml-2" />
@@ -162,8 +188,8 @@ export default function App() {
         </header>
 
         {/* MENGGANTI HALAMAN SESUAI KLIK MENU */}
-        <div className="p-8 w-full space-y-8 print:p-0 print:space-y-0">
-          {activeMenu === 'Dashboard' && <Dashboard />}
+        <div className="p-4 md:p-8 w-full space-y-6 md:space-y-8 print:p-0 print:space-y-0">
+          {activeMenu === 'Dashboard' && <Dashboard activeRole={activeRole} />}
           {activeMenu === 'Master Data' && <MasterData activeRole={activeRole} />}
           {activeMenu === 'SPJ' && <Sppd />}
           {activeMenu === 'Kegiatan' && <Kegiatan activeRole={activeRole} />}
