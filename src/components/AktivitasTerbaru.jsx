@@ -80,47 +80,51 @@ export default function AktivitasTerbaru() {
       }
     });
 
-    // 2. Status SPJ (Berdasarkan tanggal pelaksanaan terbaru)
-    const validSpjs = daftarSpj.filter(s => s.tanggal && s.tanggal.includes('-')).map(s => {
-      return { ...s, parsedDate: new Date(s.tanggal) };
-    }).sort((a, b) => b.parsedDate - a.parsedDate);
+    // 2. Status SPJ (Berdasarkan waktu realtime selesai verifikasi, per bulan per pegawai)
+    const verifiedGroups = {};
 
-    // Ambil 10 SPJ terbaru untuk dimasukkan ke aktivitas
-    validSpjs.slice(0, 10).forEach((spj, idx) => {
+    daftarSpj.forEach(spj => {
       const cl = spj.checklist || {};
       const missingCount = REQUIRED_ITEMS.filter(k => !cl[k]).length;
       const hasCatatan = spj.catatan && spj.catatan.trim() !== '';
-
-      let statusStr = '';
-      let descStr = '';
-      let icon = null;
-      let bg = '';
       
-      if (missingCount === 0 && !hasCatatan) {
-        statusStr = `Selesai Diverifikasi`;
-        descStr = `SPJ ${spj.program} (${spj.pegawaiNama})`;
-        icon = <CheckCircle size={16} className="text-emerald-600" />;
-        bg = 'bg-emerald-100';
-      } else {
-        statusStr = `Perlu Perbaikan SPJ`;
-        if (hasCatatan) {
-          descStr = `Catatan: ${spj.catatan} (${spj.pegawaiNama})`;
-        } else {
-          descStr = `Kurang dokumen pelengkap (${spj.pegawaiNama})`;
+      if (missingCount === 0 && !hasCatatan && spj.tanggal && spj.tanggal.includes('-')) {
+        const d = new Date(spj.tanggal);
+        if (!isNaN(d.getTime())) {
+          const bulanStr = `${BULAN_FULL[d.getMonth()]} ${d.getFullYear()}`;
+          const key = `${spj.pegawaiNama}_${bulanStr}`;
+          
+          const timeToUse = spj.updatedAt ? new Date(spj.updatedAt) : (spj.createdAt ? new Date(spj.createdAt) : new Date(spj.tanggal));
+          
+          if (!verifiedGroups[key] || timeToUse > verifiedGroups[key].time) {
+            verifiedGroups[key] = {
+              pegawai: spj.pegawaiNama,
+              bulan: bulanStr,
+              time: timeToUse
+            };
+          }
         }
-        icon = <AlertCircle size={16} className="text-rose-600" />;
-        bg = 'bg-rose-100';
       }
+    });
 
+    const sortedGroups = Object.values(verifiedGroups).sort((a, b) => b.time - a.time);
+
+    sortedGroups.slice(0, 10).forEach((group, idx) => {
+      const diff = Math.floor((new Date() - group.time) / 1000);
+      let timeLabel = 'Baru saja';
+      if (diff > 86400) timeLabel = `${Math.floor(diff/86400)}h lalu`;
+      else if (diff > 3600) timeLabel = `${Math.floor(diff/3600)}j lalu`;
+      else if (diff > 60) timeLabel = `${Math.floor(diff/60)}m lalu`;
+       
       list.push({
-        id: `spj_${spj.id || idx}`,
-        type: 'spj',
-        title: statusStr,
-        desc: descStr,
-        time: spj.tanggal, 
-        icon: icon,
-        bg: bg,
-        dateSort: spj.parsedDate.getTime()
+        id: `verif_${idx}`,
+        type: 'verifikasi',
+        title: group.pegawai,
+        desc: `Telah menyelesaikan seluruh verifikasi berkas untuk bulan ${group.bulan}`,
+        time: timeLabel,
+        icon: <CheckCircle size={16} className="text-emerald-600" />,
+        bg: 'bg-emerald-100',
+        dateSort: group.time.getTime()
       });
     });
 

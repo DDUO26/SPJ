@@ -37,7 +37,10 @@ export const ambilSemuaSpjDb = async () => {
 export const updateSpjDb = async (idSpj, dataUpdate) => {
   try {
     const referensiDokumen = doc(db, 'spj', idSpj);
-    await updateDoc(referensiDokumen, dataUpdate);
+    await updateDoc(referensiDokumen, {
+      ...dataUpdate,
+      updatedAt: new Date().toISOString()
+    });
     return true;
   } catch (error) {
     console.error("Gagal update SPJ:", error);
