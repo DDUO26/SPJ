@@ -214,6 +214,8 @@ export default function HasilPemeriksaan() {
         let spjBelum = 0;
         let spjLengkap = 0;
         
+        let hasCatatan = false;
+         
         mySpj.forEach(spj => {
            totalDana += Number(spj.anggaran) || 0;
            const cl = spj.checklist || {};
@@ -223,6 +225,8 @@ export default function HasilPemeriksaan() {
            if (isLengkap) spjLengkap++;
            else if (filledAny) spjKurang++;
            else spjBelum++;
+
+           if (spj.catatan && spj.catatan.trim() !== '') hasCatatan = true;
         });
 
         let persentase = totalKegiatan === 0 ? 0 : Math.round((spjLengkap / totalKegiatan) * 100);
@@ -247,7 +251,8 @@ export default function HasilPemeriksaan() {
            berkasKurang: spjKurang,
            belumInput: spjBelum,
            persentase,
-           status
+           status,
+           hasCatatan
         };
      });
 
@@ -816,7 +821,10 @@ export default function HasilPemeriksaan() {
                           {getInitials(peg.nama)}
                         </div>
                         <div className="pr-8">
-                           <h4 className={`text-sm font-bold ${nameClass} leading-tight line-clamp-1`} title={peg.nama}>{peg.nama}</h4>
+                           <div className="flex items-center gap-2">
+                              <h4 className={`text-sm font-bold ${nameClass} leading-tight line-clamp-1`} title={peg.nama}>{peg.nama}</h4>
+                              {peg.hasCatatan && <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-600 border border-amber-200 whitespace-nowrap">(Ada Catatan)</span>}
+                           </div>
                            <p className="text-[11px] font-medium text-slate-500 mt-0.5 truncate w-48 lg:w-64">{peg.jabatan}</p>
                         </div>
                      </div>
@@ -845,9 +853,15 @@ export default function HasilPemeriksaan() {
                         </div>
 
                         {/* Berkas Kurang */}
-                        <div className={`flex flex-col items-center justify-center min-w-[65px] h-[55px] rounded-xl ${kuranBg} ${bellClass}`}>
-                           <span className="text-xl font-black leading-none">{totalKurang}</span>
-                           <span className="text-[9px] font-bold mt-1 text-center leading-tight">Belum<br/>Lengkap</span>
+                        <div className={`flex flex-col items-center justify-center px-2 min-w-[75px] h-[55px] rounded-xl ${kuranBg} ${bellClass}`}>
+                           {totalKurang === 0 ? (
+                              <span className="text-[11px] font-bold text-center leading-tight">Sudah<br/>Lengkap</span>
+                           ) : (
+                              <>
+                                 <span className="text-xl font-black leading-none">{totalKurang}</span>
+                                 <span className="text-[9px] font-bold mt-1 text-center leading-tight">Belum<br/>Lengkap</span>
+                              </>
+                           )}
                         </div>
                      </div>
                      {/* Mobile Progress Bar */}
