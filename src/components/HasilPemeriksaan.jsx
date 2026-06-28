@@ -29,7 +29,7 @@ export default function HasilPemeriksaan() {
   
   const [selectedBulan, setSelectedBulan] = useState('ALL');
   const [selectedJabatan, setSelectedJabatan] = useState('ALL');
-  const [sortOrder, setSortOrder] = useState('Terbanyak Kurang');
+  const [sortOrder, setSortOrder] = useState('Paling Lengkap');
   
   const [selectedPegawaiDetail, setSelectedPegawaiDetail] = useState(null);
   const [activeTab, setActiveTab] = useState('Daftar Kelengkapan');
