@@ -1071,8 +1071,9 @@ export default function Verifikasi() {
               <div className="space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin pr-1">
                 {getSpjPegawai(selectedPegawaiDetail).sort((a, b) => (a.tanggal > b.tanggal ? -1 : 1)).map(spj => {
                   const st = getStatusTanggal(spj);
-                  const checkedCount = Object.values(spj.checklist || {}).filter(v => v).length;
-                  const missing = CHECKLIST_ITEMS.filter(i => !(spj.checklist || {})[i.key]);
+                  const requiredItems = CHECKLIST_ITEMS.filter(i => !i.optional);
+                  const checkedCount = requiredItems.filter(i => (spj.checklist || {})[i.key]).length;
+                  const missing = requiredItems.filter(i => !(spj.checklist || {})[i.key]);
                   const isChecked = selectedSpjsForEdit.includes(spj.id);
 
                   return (
@@ -1101,7 +1102,7 @@ export default function Verifikasi() {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-bold ${st === 'lengkap' ? 'text-emerald-400' : st === 'kurang' ? 'text-amber-400' : 'text-rose-400'}`}>
-                            {checkedCount}/{CHECKLIST_ITEMS.length}
+                            {checkedCount}/{requiredItems.length}
                           </span>
                           <button onClick={(e) => { e.stopPropagation(); openEditModalSingle(spj.id); }} className="text-slate-500 hover:text-blue-400">
                             <Edit size={12} />
