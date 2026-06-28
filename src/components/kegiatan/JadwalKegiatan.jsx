@@ -129,7 +129,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
     setTimeout(() => setPesan(''), 3000);
   };
 
-  const eksekusiUploadExcel = async () => {
+  const eksekusiUploadExcel = async (isAppend = false) => {
     if (!confirmUploadData) return;
     const { jadwalBaru, bulanJadwal, hasExisting } = confirmUploadData;
     
@@ -137,7 +137,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
     setLoading(true);
     
     try {
-      if (hasExisting) {
+      if (hasExisting && !isAppend) {
           setPesan(`Menghapus data lama bulan ${bulanJadwal}...`);
           const dataBulanLama = daftarKegiatan.filter(dk => dk.bulan === bulanJadwal);
           for (const dk of dataBulanLama) {
@@ -148,7 +148,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
       setPesan('Menyimpan jadwal baru...');
       await simpanBanyakKegiatanDb(jadwalBaru, []);
       
-      setPesan(`Sukses! Berhasil ${hasExisting ? 'mengganti' : 'menambahkan'} jadwal bulan ${bulanJadwal} dengan ${jadwalBaru.length} data baru.`);
+      setPesan(`Sukses! Berhasil ${hasExisting && !isAppend ? 'mengganti' : 'menambahkan'} jadwal bulan ${bulanJadwal} dengan ${jadwalBaru.length} data baru.`);
       setBulanAktif(bulanJadwal);
       await tarikData();
     } catch (error) {
@@ -400,17 +400,28 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
               Ditemukan <span className="font-bold text-indigo-600">{confirmUploadData.jadwalBaru.length} kegiatan</span> untuk bulan <span className="font-bold text-indigo-600">{confirmUploadData.bulanJadwal}</span>.
               <br/><br/>
               {confirmUploadData.hasExisting ? (
-                <>Sistem akan <strong className="text-rose-600">MENGHAPUS SEMUA</strong> jadwal lama di bulan <span className="font-bold text-slate-800">{confirmUploadData.bulanJadwal}</span> dan menimpanya dengan data baru ini.</>
+                <>Anda dapat memilih untuk menimpa semua jadwal lama dengan yang baru ini, atau cukup menambahkannya saja (tanpa menghapus yang lama).</>
               ) : (
                 <>Data bulan <span className="font-bold text-slate-800">{confirmUploadData.bulanJadwal}</span> belum ada di database. Jadwal ini akan ditambahkan sebagai bulan baru yang sepenuhnya aman.</>
               )}
             </p>
             
-            <div className="flex gap-3 mt-2">
-              <button onClick={batalkanUpload} className="flex-1 px-5 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Batal</button>
-              <button onClick={eksekusiUploadExcel} className={`flex-1 px-5 py-3 rounded-xl font-bold text-sm text-white shadow-md transition-colors ${confirmUploadData.hasExisting ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-200' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200'}`}>
-                {confirmUploadData.hasExisting ? 'Ya, Timpa Data' : 'Ya, Tambahkan'}
-              </button>
+            <div className="flex flex-col gap-3 mt-2">
+              {confirmUploadData.hasExisting ? (
+                <>
+                  <button onClick={() => eksekusiUploadExcel(true)} className="w-full px-5 py-3 rounded-xl font-bold text-sm text-white shadow-md bg-blue-600 hover:bg-blue-700 shadow-blue-200 transition-colors">
+                    Tambahkan Saja (Tanpa Menghapus Jadwal Lama)
+                  </button>
+                  <button onClick={() => eksekusiUploadExcel(false)} className="w-full px-5 py-3 rounded-xl font-bold text-sm text-white shadow-md bg-amber-600 hover:bg-amber-700 shadow-amber-200 transition-colors">
+                    Timpa Seluruh Jadwal Lama (Ganti Baru)
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => eksekusiUploadExcel(false)} className="w-full px-5 py-3 rounded-xl font-bold text-sm text-white shadow-md bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200 transition-colors">
+                  Ya, Simpan Jadwal Baru
+                </button>
+              )}
+              <button onClick={batalkanUpload} className="w-full px-5 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Batal</button>
             </div>
           </div>
         </div>
