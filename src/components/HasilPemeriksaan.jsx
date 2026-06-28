@@ -606,7 +606,42 @@ export default function HasilPemeriksaan() {
                              )}
                           </div>
                        )}
-                       {activeTab !== 'Daftar Kelengkapan' && (
+                       {activeTab === 'Catatan Verifikasi' && (
+                          <div className="p-4 sm:p-6 overflow-y-auto h-full">
+                             {(() => {
+                                const spjDenganCatatan = mySpj.filter(s => s.catatan && s.catatan.trim() !== '').sort((a,b) => new Date(b.tanggal) - new Date(a.tanggal));
+                                if (spjDenganCatatan.length === 0) {
+                                   return (
+                                      <div className="flex flex-col items-center justify-center h-48 text-slate-400">
+                                         <CheckCircle size={32} className="mb-2 opacity-50 text-emerald-500" />
+                                         <p className="text-sm font-medium">Tidak ada catatan verifikasi.</p>
+                                      </div>
+                                   );
+                                }
+                                return (
+                                   <div className="space-y-4">
+                                      {spjDenganCatatan.map((s, idx) => (
+                                         <div key={idx} className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 shadow-sm flex items-start gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 shadow-sm border border-amber-200">
+                                               <AlertCircle size={18} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                               <h5 className="font-bold text-slate-800 text-sm mb-0.5">
+                                                  {s.tanggal ? new Date(s.tanggal).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : 'Tanpa Tanggal'}
+                                               </h5>
+                                               <p className="text-xs text-slate-500 font-medium mb-3 truncate" title={s.program}>{s.program}</p>
+                                               <div className="bg-white p-3 rounded-xl border border-amber-100 text-sm text-slate-700 shadow-sm whitespace-pre-wrap">
+                                                  {s.catatan}
+                                               </div>
+                                            </div>
+                                         </div>
+                                      ))}
+                                   </div>
+                                );
+                             })()}
+                          </div>
+                       )}
+                       {activeTab !== 'Daftar Kelengkapan' && activeTab !== 'Catatan Verifikasi' && (
                           <div className="flex flex-col items-center justify-center h-48 text-slate-400">
                              <FileX size={32} className="mb-2 opacity-50" />
                              <p className="text-sm font-medium">Tampilan untuk "{activeTab}" sedang dikembangkan.</p>
