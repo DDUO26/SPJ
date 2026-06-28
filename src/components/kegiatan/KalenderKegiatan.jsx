@@ -12,6 +12,7 @@ import { ambilSemuaKegiatanDb, simpanBanyakKegiatanDb } from '../../services/keg
 import { ambilSemuaSpjDb } from '../../services/spjService';
 import { ambilSemuaPegawaiDb } from '../../services/pegawaiService';
 import { ambilSemuaDesaDb } from '../../services/desaService';
+import { ambilSemuaSekolahDb } from '../../services/sekolahService';
 
 // Logo untuk Cetak
 import logoMitra from '../../assets/logo mitra.png';
@@ -30,6 +31,7 @@ export default function KalenderKegiatan() {
   const [daftarSpj, setDaftarSpj] = useState([]);
   const [daftarPegawai, setDaftarPegawai] = useState([]);
   const [daftarDesa, setDaftarDesa] = useState([]);
+  const [daftarSekolah, setDaftarSekolah] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filter States
@@ -70,16 +72,18 @@ export default function KalenderKegiatan() {
   const tarikData = async () => {
     try {
       setLoading(true);
-      const [dataKeg, dataSpj, dataPeg, dataDes] = await Promise.all([
+      const [dataKeg, dataSpj, dataPeg, dataDes, dataSekolah] = await Promise.all([
         ambilSemuaKegiatanDb(),
         ambilSemuaSpjDb(),
         ambilSemuaPegawaiDb(),
-        ambilSemuaDesaDb()
+        ambilSemuaDesaDb(),
+        ambilSemuaSekolahDb()
       ]);
       setDaftarKegiatan(dataKeg);
       setDaftarSpj(dataSpj);
       setDaftarPegawai(dataPeg);
       setDaftarDesa(dataDes);
+      setDaftarSekolah(dataSekolah);
     } catch (error) {
       console.error('Gagal menarik data kegiatan & SPJ', error);
     } finally {
@@ -1316,17 +1320,24 @@ export default function KalenderKegiatan() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tujuan (Desa)</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Tujuan (Desa / Sekolah)</label>
                 <select 
                   value={formDesa} 
                   onChange={(e) => setFormDesa(e.target.value)}
                   className="w-full border border-slate-350 rounded-xl px-3 py-2 text-xs bg-white text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none"
                   required
                 >
-                  <option value="">-- Pilih Desa --</option>
-                  {daftarDesa.map(desa => (
-                    <option key={desa.id} value={desa.namaDesa}>{desa.namaDesa}</option>
-                  ))}
+                  <option value="">-- Pilih Tujuan --</option>
+                  <optgroup label="Desa">
+                    {daftarDesa.map(desa => (
+                      <option key={desa.id} value={desa.namaDesa}>{desa.namaDesa}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Sekolah">
+                    {daftarSekolah.map(sekolah => (
+                      <option key={sekolah.id} value={sekolah.namaSekolah}>{sekolah.namaSekolah}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 

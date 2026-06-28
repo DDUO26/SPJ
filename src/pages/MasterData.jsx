@@ -6,6 +6,7 @@ import {
 
 import Pegawai from '../components/master/Pegawai';
 import DataDesa from '../components/master/DataDesa';
+import DataSekolah from '../components/master/DataSekolah';
 import Pejabat from '../components/master/Pejabat';
 
 // Placeholder untuk tab yang belum aktif
@@ -31,6 +32,7 @@ export default function MasterData({ activeRole = 'Admin' }) {
     { id: 'Pegawai', label: 'Pegawai', icon: Users },
     { id: 'Pejabat', label: 'Pejabat', icon: Briefcase },
     { id: 'Desa', label: 'Desa', icon: MapPin },
+    { id: 'Sekolah', label: 'Sekolah', icon: MapPin },
     { id: 'Program', label: 'Program', icon: Bookmark },
     { id: 'Kegiatan', label: 'Jenis Kegiatan', icon: ListTodo },
     { id: 'Biaya', label: 'Standar Biaya', icon: DollarSign },
@@ -80,6 +82,7 @@ export default function MasterData({ activeRole = 'Admin' }) {
         {activeTab === 'Pegawai' && <Pegawai activeRole={activeRole} />}
         {activeTab === 'Pejabat' && activeRole === 'Admin' && <Pejabat />}
         {activeTab === 'Desa' && <DataDesa />}
+        {activeTab === 'Sekolah' && <DataSekolah />}
         
         {/* Placeholders */}
         {activeTab === 'Program' && <Placeholder judul="Program" icon={Bookmark} />}

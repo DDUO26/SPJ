@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx';
 import { simpanBanyakKegiatanDb, ambilSemuaKegiatanDb, hapusKegiatanDb, updateKegiatanDb } from '../../services/kegiatanService';
 import { ambilSemuaPegawaiDb } from '../../services/pegawaiService';
 import { ambilSemuaDesaDb } from '../../services/desaService';
+import { ambilSemuaSekolahDb } from '../../services/sekolahService';
 
 // Logo untuk Cetak
 import logoMitra from '../../assets/logo mitra.png';
@@ -23,6 +24,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
   const [daftarKegiatan, setDaftarKegiatan] = useState([]);
   const [daftarPegawai, setDaftarPegawai] = useState([]);
   const [daftarDesa, setDaftarDesa] = useState([]);
+  const [daftarSekolah, setDaftarSekolah] = useState([]);
   const [pesan, setPesan] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,9 +56,11 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
       const dataKeg = await ambilSemuaKegiatanDb();
       const dataPeg = await ambilSemuaPegawaiDb();
       const dataDes = await ambilSemuaDesaDb();
+      const dataSek = await ambilSemuaSekolahDb();
       setDaftarKegiatan(dataKeg);
       setDaftarPegawai(dataPeg);
       setDaftarDesa(dataDes);
+      setDaftarSekolah(dataSek);
       
       const bulanList = [...new Set(dataKeg.map(k => k.bulan || 'UMUM'))].filter(b => b !== 'UMUM');
       if (bulanList.length > 0 && !bulanAktif) setBulanAktif(bulanList[0]);

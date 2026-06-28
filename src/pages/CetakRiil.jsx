@@ -23,8 +23,13 @@ export default function CetakRiil({ printData, pegawaiCetak, bendahara, kpa, ppt
   };
 
   // Fungsi Format Desa
-  const formatDesa = (desa) => desa && (desa.toLowerCase().includes('desa') || desa.toLowerCase().includes('kelurahan')) ? desa : desa ? `Desa ${desa}` : '.......................................';
-
+  const formatDesa = (desa) => {
+    if (!desa) return '.......................................';
+    const cekDesa = String(desa).toLowerCase();
+    if (cekDesa.includes('desa') || cekDesa.includes('kelurahan')) return desa;
+    if (cekDesa.includes('sd ') || cekDesa.includes('smp ') || cekDesa.includes('tk ') || cekDesa.includes('sdn ')) return desa;
+    return `Desa ${desa}`;
+  };
   const getBulanRomawi = (bln) => {
     if (!bln) return 'VI';
     const namaBulan = bln.split(' ')[0].toUpperCase();

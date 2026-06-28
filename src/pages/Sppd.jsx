@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Printer, FileText, Calendar, MapPin, User, Car, Zap } from 'lucide-react';
 import { ambilSemuaPegawaiDb } from '../services/pegawaiService';
 import { ambilSemuaDesaDb } from '../services/desaService';
+import { ambilSemuaSekolahDb } from '../services/sekolahService';
 import { ambilSemuaKegiatanDb } from '../services/kegiatanService'; // Kurir Kegiatan
 
 // Import logo dari folder assets
@@ -11,6 +12,7 @@ import logoPkm from '../assets/logopkm.png';
 export default function Sppd() {
   const [daftarPegawai, setDaftarPegawai] = useState([]);
   const [daftarDesa, setDaftarDesa] = useState([]);
+  const [daftarSekolah, setDaftarSekolah] = useState([]);
   const [daftarKegiatan, setDaftarKegiatan] = useState([]);
 
   // State Form
@@ -29,9 +31,11 @@ export default function Sppd() {
     const tarikData = async () => {
       const dataPeg = await ambilSemuaPegawaiDb();
       const dataDes = await ambilSemuaDesaDb();
+      const dataSek = await ambilSemuaSekolahDb();
       const dataKeg = await ambilSemuaKegiatanDb(); // Tarik jadwal
       setDaftarPegawai(dataPeg);
       setDaftarDesa(dataDes);
+      setDaftarSekolah(dataSek);
       setDaftarKegiatan(dataKeg);
     };
     tarikData();
@@ -136,7 +140,9 @@ export default function Sppd() {
   const formatDesa = (desa) => {
     if (!desa) return '.......................................';
     const cekDesa = String(desa).toLowerCase();
-    return cekDesa.includes('desa') || cekDesa.includes('kelurahan') ? desa : `Desa ${desa}`;
+    if (cekDesa.includes('desa') || cekDesa.includes('kelurahan')) return desa;
+    if (cekDesa.includes('sd ') || cekDesa.includes('smp ') || cekDesa.includes('tk ') || cekDesa.includes('sdn ')) return desa;
+    return `Desa ${desa}`;
   };
 
   const normalizeDesaName = (name) => {
@@ -146,6 +152,22 @@ export default function Sppd() {
 
   const getKepalaDesa = (namaDesa) => {
     if (!namaDesa) return '(...................................................)';
+    
+    const cekDesa = String(namaDesa).toLowerCase();
+    const isSekolah = cekDesa.includes('sd ') || cekDesa.includes('smp ') || cekDesa.includes('tk ') || cekDesa.includes('sdn ');
+    
+    if (isSekolah) {
+      const sekolah = daftarSekolah.find(s => s.namaSekolah.toLowerCase() === cekDesa);
+      if (sekolah && sekolah.namaKepsek && sekolah.namaKepsek !== '-') {
+        return (
+          <>
+            <span className="font-bold underline uppercase">{sekolah.namaKepsek}</span>
+          </>
+        );
+      }
+      return '(...................................................)';
+    }
+
     const normalizedInput = normalizeDesaName(namaDesa);
     const desa = daftarDesa.find(d => normalizeDesaName(d.namaDesa) === normalizedInput);
     if (desa && desa.namaKades) {
@@ -211,12 +233,19 @@ export default function Sppd() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><MapPin size={14}/> Tujuan (Desa Wilayah)</label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><MapPin size={14}/> Tujuan (Desa / Sekolah)</label>
             <select value={desaTujuan} onChange={(e) => setDesaTujuan(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="">-- Pilih Desa Tujuan --</option>
-              {daftarDesa.map(desa => (
-                <option key={desa.id} value={desa.namaDesa}>{desa.namaDesa}</option>
-              ))}
+              <option value="">-- Pilih Tujuan --</option>
+              <optgroup label="Desa">
+                {daftarDesa.map(desa => (
+                  <option key={desa.id} value={desa.namaDesa}>{desa.namaDesa}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Sekolah">
+                {daftarSekolah.map(sekolah => (
+                  <option key={sekolah.id} value={sekolah.namaSekolah}>{sekolah.namaSekolah}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
           <div className="md:col-span-2">
