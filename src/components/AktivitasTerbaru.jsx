@@ -7,6 +7,7 @@ import { ambilSemuaSpjDb } from '../services/spjService';
 
 const BULAN_FULL = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 const CHECKLIST_ITEMS = ['sppd', 'suratTugas', 'daftarHadir', 'dokumentasi', 'riilCost', 'kwitansi', 'suratPernyataan', 'laporan'];
+const REQUIRED_ITEMS = ['sppd', 'suratTugas', 'dokumentasi', 'riilCost', 'suratPernyataan', 'laporan'];
 
 export default function AktivitasTerbaru() {
   const [daftarKegiatan, setDaftarKegiatan] = useState([]);
@@ -87,7 +88,7 @@ export default function AktivitasTerbaru() {
     // Ambil 10 SPJ terbaru untuk dimasukkan ke aktivitas
     validSpjs.slice(0, 10).forEach((spj, idx) => {
       const cl = spj.checklist || {};
-      const missingCount = CHECKLIST_ITEMS.filter(k => !cl[k]).length;
+      const missingCount = REQUIRED_ITEMS.filter(k => !cl[k]).length;
       const hasCatatan = spj.catatan && spj.catatan.trim() !== '';
 
       let statusStr = '';

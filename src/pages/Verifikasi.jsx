@@ -15,10 +15,10 @@ import {
 const CHECKLIST_ITEMS = [
   { key: 'sppd', label: 'SPPD' },
   { key: 'suratTugas', label: 'Surat Tugas' },
-  { key: 'daftarHadir', label: 'Daftar Hadir' },
+  { key: 'daftarHadir', label: 'Daftar Hadir (Opsional)', optional: true },
   { key: 'dokumentasi', label: 'Dokumentasi' },
   { key: 'riilCost', label: 'Riil Cost' },
-  { key: 'kwitansi', label: 'Kwitansi' },
+  { key: 'kwitansi', label: 'Kwitansi (Opsional)', optional: true },
   { key: 'suratPernyataan', label: 'Surat Pernyataan' },
   { key: 'laporan', label: 'Laporan' },
 ];
@@ -559,9 +559,12 @@ export default function Verifikasi() {
   const getStatusTanggal = (spjItem) => {
     if (!spjItem) return 'belum';
     const cl = spjItem.checklist || {};
-    const filled = Object.values(cl).filter(v => v).length;
-    if (filled === CHECKLIST_ITEMS.length) return 'lengkap';
-    if (filled > 0) return 'kurang';
+    const requiredKeys = CHECKLIST_ITEMS.filter(item => !item.optional).map(item => item.key);
+    const isLengkap = requiredKeys.every(k => cl[k]);
+    const filledAny = Object.values(cl).some(v => v);
+    
+    if (isLengkap) return 'lengkap';
+    if (filledAny) return 'kurang';
     return 'belum';
   };
 

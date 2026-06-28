@@ -10,10 +10,10 @@ import { ambilSemuaSpjDb, ambilSemuaCatatanPegawaiDb } from '../services/spjServ
 const CHECKLIST_ITEMS = [
   { key: 'sppd', label: 'SPPD' },
   { key: 'suratTugas', label: 'Surat Tugas' },
-  { key: 'daftarHadir', label: 'Daftar Hadir' },
+  { key: 'daftarHadir', label: 'Daftar Hadir (Opsional)', optional: true },
   { key: 'dokumentasi', label: 'Dokumentasi' },
   { key: 'riilCost', label: 'Riil Cost' },
-  { key: 'kwitansi', label: 'Kwitansi' },
+  { key: 'kwitansi', label: 'Kwitansi (Opsional)', optional: true },
   { key: 'suratPernyataan', label: 'Surat Pernyataan' },
   { key: 'laporan', label: 'Laporan' },
 ];
@@ -217,9 +217,11 @@ export default function HasilPemeriksaan() {
         mySpj.forEach(spj => {
            totalDana += Number(spj.anggaran) || 0;
            const cl = spj.checklist || {};
-           const filled = Object.values(cl).filter(v => v).length;
-           if (filled === 8) spjLengkap++;
-           else if (filled > 0) spjKurang++;
+           const isLengkap = cl.sppd && cl.suratTugas && cl.dokumentasi && cl.riilCost && cl.suratPernyataan && cl.laporan;
+           const filledAny = Object.values(cl).some(v => v);
+           
+           if (isLengkap) spjLengkap++;
+           else if (filledAny) spjKurang++;
            else spjBelum++;
         });
 
@@ -354,9 +356,12 @@ export default function HasilPemeriksaan() {
     let spjBelum = 0;
     let spjRevisi = 0;
     mySpj.forEach(s => {
-       const checkedItems = Object.values(s.checklist || {}).filter(Boolean).length;
-       if (checkedItems === 8) spjLengkap++;
-       else if (checkedItems > 0) spjKurang++;
+       const cl = s.checklist || {};
+       const isLengkap = cl.sppd && cl.suratTugas && cl.dokumentasi && cl.riilCost && cl.suratPernyataan && cl.laporan;
+       const filledAny = Object.values(cl).some(v => v);
+       
+       if (isLengkap) spjLengkap++;
+       else if (filledAny) spjKurang++;
        else spjBelum++;
        
        if (s.catatan && s.catatan.trim() !== '') spjRevisi++;

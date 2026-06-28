@@ -51,8 +51,8 @@ export default function Dashboard({ activeRole }) {
     let belum = 0;
     filteredSpj.forEach(s => {
       const cl = s.checklist || {};
-      const filledCount = Object.values(cl).filter(v => v).length;
-      if (filledCount === 8) lengkap++;
+      const isLengkap = cl.sppd && cl.suratTugas && cl.dokumentasi && cl.riilCost && cl.suratPernyataan && cl.laporan;
+      if (isLengkap) lengkap++;
       else belum++;
     });
     const total = lengkap + belum;
@@ -72,8 +72,8 @@ export default function Dashboard({ activeRole }) {
         const p = parseTanggalSPJ(s.tanggal);
         if (p && p.month === i && p.year === currentYear) {
           const cl = s.checklist || {};
-          const filledCount = Object.values(cl).filter(v => v).length;
-          if (filledCount === 8) blnLengkap++;
+          const isLengkap = cl.sppd && cl.suratTugas && cl.dokumentasi && cl.riilCost && cl.suratPernyataan && cl.laporan;
+          if (isLengkap) blnLengkap++;
           else blnBelum++;
         }
       });
@@ -96,8 +96,8 @@ export default function Dashboard({ activeRole }) {
     filteredSpj.forEach(s => {
       const cl = s.checklist || {};
       sumSpj += ((cl.sppd ? 1 : 0) + (cl.suratTugas ? 1 : 0)) / 2;
-      sumKegiatan += ((cl.daftarHadir ? 1 : 0) + (cl.dokumentasi ? 1 : 0) + (cl.laporan ? 1 : 0)) / 3;
-      sumDokumen += ((cl.suratPernyataan ? 1 : 0) + (cl.kwitansi ? 1 : 0)) / 2;
+      sumKegiatan += ((cl.dokumentasi ? 1 : 0) + (cl.laporan ? 1 : 0)) / 2;
+      sumDokumen += (cl.suratPernyataan ? 1 : 0);
       sumEntri += cl.riilCost ? 1 : 0;
     });
     return [

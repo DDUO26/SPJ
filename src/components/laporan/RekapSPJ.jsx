@@ -32,7 +32,7 @@ export default function RekapSPJ() {
       // Definisi kelengkapan: minimal SPPD, Surat Tugas, Kwitansi, dll. (Anggap saja jika ada false = belum lengkap)
       // Tapi karena ini rekap umum, kita cek if any is missing.
       // Kita harus tahu apa saja checklist item nya.
-      const keys = ['sppd', 'suratTugas', 'daftarHadir', 'dokumentasi', 'riilCost', 'kwitansi', 'suratPernyataan', 'laporan'];
+      const keys = ['sppd', 'suratTugas', 'dokumentasi', 'riilCost', 'suratPernyataan', 'laporan'];
       let isLengkap = true;
       keys.forEach(k => {
          if (!cl[k]) {
