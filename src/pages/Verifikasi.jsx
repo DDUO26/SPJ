@@ -113,13 +113,13 @@ export default function Verifikasi() {
     if (!str) return [];
     
     const results = [];
-    let remaining = str.toLowerCase();
+    let remaining = str.toLowerCase().replace(/,\s*/g, ', ');
     
     // Sort by name length descending so longest match wins first
     const sortedPegawai = [...daftarPegawai].sort((a, b) => b.nama.length - a.nama.length);
     
     for (const peg of sortedPegawai) {
-      const pegLower = peg.nama.toLowerCase().trim();
+      const pegLower = peg.nama.toLowerCase().trim().replace(/,\s*/g, ', ');
       const idx = remaining.indexOf(pegLower);
       if (idx !== -1) {
         results.push(peg.nama);
@@ -128,9 +128,9 @@ export default function Verifikasi() {
       }
     }
     
-    // Fallback: if no exact match, try matching by significant first name words
-    if (results.length === 0) {
-      const words = str.split(/[,\s]+/).filter(w => w.length > 3 && !/^(amd|skm|sst|str|kep|keb|s\.kep|ns|m\.p\.h|amkl|amkg|skg|dr|drg)$/i.test(w));
+    // Fallback: if there are still unmatched words
+    if (remaining.replace(/[^a-z]/g, '').length > 3) {
+      const words = remaining.split(/[,\s]+/).filter(w => w.length > 3 && !/^(amd|skm|sst|str|kep|keb|s\.kep|ns|m\.p\.h|amkl|amkg|skg|dr|drg)$/i.test(w));
       for (const word of words) {
         const match = daftarPegawai.find(p => {
           const pNameWords = p.nama.toLowerCase().split(/[ \-.,]+/);
