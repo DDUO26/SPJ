@@ -20,7 +20,7 @@ const CHECKLIST_ITEMS = [
 
 const BULAN_FULL = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
 
-export default function HasilPemeriksaan() {
+export default function HasilPemeriksaan({ activeRole, activeUser }) {
   const [daftarPegawai, setDaftarPegawai] = useState([]);
   const [daftarKegiatan, setDaftarKegiatan] = useState([]);
   const [daftarSpj, setDaftarSpj] = useState([]);
@@ -674,7 +674,149 @@ export default function HasilPemeriksaan() {
     );
   }
 
-  return (
+
+  const renderPegawaiView = () => {
+    const myStat = filteredPegawaiStats.find(p => p.nama === activeUser?.nama);
+    if (!myStat) {
+      return (
+        <div className="bg-white rounded-[2rem] p-8 shadow-sm text-center border border-slate-200">
+          <AlertCircle size={48} className="mx-auto text-slate-300 mb-4" />
+          <h3 className="text-xl font-bold text-slate-800">Data Tidak Ditemukan</h3>
+          <p className="text-slate-500 mt-2">Tidak ada data SPJ untuk Anda saat ini.</p>
+        </div>
+      );
+    }
+    
+    const mySpjs = combinedSpjList.filter(s => s.pegawaiNama === activeUser?.nama);
+    const actionNeededSpjs = mySpjs.filter(s => {
+       const missingCount = CHECKLIST_ITEMS.filter(k => !k.optional && (!s.checklist || !s.checklist[k.key])).length;
+       const hasCatatan = s.catatan && s.catatan.trim() !== '';
+       return missingCount > 0 || hasCatatan;
+    });
+
+    const isAllComplete = actionNeededSpjs.length === 0;
+
+    return (
+      <div className="w-full flex flex-col space-y-6 animate-in fade-in duration-300">
+        <div className="flex gap-4 border-b border-slate-200">
+          <button 
+             onClick={() => setActiveTab('Daftar Kelengkapan')}
+             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab !== 'Riwayat' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+             To-Do List Perbaikan
+          </button>
+          <button 
+             onClick={() => setActiveTab('Riwayat')}
+             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'Riwayat' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
+             Semua Riwayat Kegiatan
+          </button>
+        </div>
+
+        {activeTab === 'Riwayat' ? (
+           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="font-bold text-slate-800">Riwayat Kelengkapan Anda</h3>
+                 <button onClick={() => setSelectedPegawaiDetail(myStat)} className="text-xs font-bold bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors">Lihat Detail Matrix</button>
+              </div>
+              <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                 <div className="text-center flex-1">
+                    <p className="text-3xl font-black text-slate-800">{myStat.totalKegiatan}</p>
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Total Kegiatan</p>
+                 </div>
+                 <div className="w-px h-12 bg-slate-200 hidden md:block"></div>
+                 <div className="text-center flex-1">
+                    <p className="text-3xl font-black text-emerald-500">{myStat.totalKegiatan - myStat.berkasKurang - myStat.belumInput}</p>
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Kegiatan Lengkap</p>
+                 </div>
+                 <div className="w-px h-12 bg-slate-200 hidden md:block"></div>
+                 <div className="text-center flex-1">
+                    <p className="text-3xl font-black text-rose-500">{myStat.berkasKurang + myStat.belumInput}</p>
+                    <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Belum Lengkap</p>
+                 </div>
+              </div>
+           </div>
+        ) : (
+           <>
+              {isAllComplete ? (
+                 <div className="bg-emerald-500 rounded-3xl p-6 text-white shadow-lg flex items-center gap-6">
+                    <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm hidden sm:block">
+                       <CheckCircle size={32} className="text-white" />
+                    </div>
+                    <div>
+                       <h2 className="text-xl sm:text-2xl font-black mb-1">Luar Biasa!</h2>
+                       <p className="text-emerald-50 text-xs sm:text-sm font-medium">Seluruh SPJ kegiatan Anda sudah lengkap dan terverifikasi dengan baik.</p>
+                    </div>
+                 </div>
+              ) : (
+                 <div className="bg-rose-500 rounded-3xl p-6 text-white shadow-lg flex items-center gap-6">
+                    <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm hidden sm:block">
+                       <AlertCircle size={32} className="text-white" />
+                    </div>
+                    <div>
+                       <h2 className="text-xl sm:text-2xl font-black mb-1">Tindakan Diperlukan</h2>
+                       <p className="text-rose-50 text-xs sm:text-sm font-medium">Ada {actionNeededSpjs.length} kegiatan yang berkasnya kurang atau memiliki catatan revisi dari admin.</p>
+                    </div>
+                 </div>
+              )}
+
+              {!isAllComplete && (
+                 <div className="space-y-4 mt-2">
+                    {actionNeededSpjs.map((spj, idx) => {
+                       const missingItems = CHECKLIST_ITEMS.filter(k => !k.optional && (!spj.checklist || !spj.checklist[k.key])).map(k => k.label);
+                       return (
+                          <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-start md:items-center hover:border-indigo-300 transition-colors cursor-pointer" onClick={() => setSelectedPegawaiDetail(myStat)}>
+                             <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                   <Calendar size={14} className="text-slate-400" />
+                                   <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">{spj.tanggal_format}</span>
+                                </div>
+                                <h4 className="font-bold text-slate-800 text-base leading-tight">{spj.kegiatan}</h4>
+                             </div>
+                             
+                             <div className="flex flex-col gap-2 w-full md:w-1/2">
+                                {missingItems.length > 0 && (
+                                   <div className="bg-rose-50 px-3 py-2.5 rounded-xl flex items-start gap-2 border border-rose-100">
+                                      <FileX size={16} className="text-rose-500 mt-0.5 shrink-0" />
+                                      <div>
+                                         <p className="text-[10px] font-bold text-rose-700 uppercase mb-0.5">Berkas Kurang:</p>
+                                         <p className="text-[11px] text-rose-600 font-bold leading-tight">{missingItems.join(', ')}</p>
+                                      </div>
+                                   </div>
+                                )}
+                                
+                                {spj.catatan && spj.catatan.trim() !== '' && (
+                                   <div className="bg-amber-50 px-3 py-2.5 rounded-xl flex items-start gap-2 border border-amber-100">
+                                      <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                                      <div>
+                                         <p className="text-[10px] font-bold text-amber-700 uppercase mb-0.5">Catatan Admin:</p>
+                                         <p className="text-[11px] text-amber-700 font-bold leading-tight">{spj.catatan}</p>
+                                      </div>
+                                   </div>
+                                )}
+                             </div>
+                          </div>
+                       )
+                    })}
+                 </div>
+              )}
+           </>
+        )}
+      </div>
+    );
+  };
+
+
+  if (activeRole === 'Pegawai') {
+    return (
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        {renderPegawaiView()}
+        {renderModal()}
+      </div>
+    );
+  }
+
+    return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* 5 SUMMARY CARDS */}

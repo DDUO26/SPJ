@@ -200,7 +200,7 @@ export default function App() {
 
         {/* MENGGANTI HALAMAN SESUAI KLIK MENU */}
         <div className="p-4 md:p-8 w-full space-y-6 md:space-y-8 print:p-0 print:space-y-0">
-          {activeMenu === 'Dashboard' && <Dashboard activeRole={activeRole} />}
+          {activeMenu === 'Dashboard' && <Dashboard activeRole={activeRole} activeUser={currentUser} />}
           {activeMenu === 'Master Data' && <MasterData activeRole={activeRole} />}
           {activeMenu === 'SPJ' && <Sppd />}
           {activeMenu === 'Kegiatan' && <Kegiatan activeRole={activeRole} />}

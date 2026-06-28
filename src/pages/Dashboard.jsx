@@ -14,8 +14,7 @@ import imgBerkas3D from '../assets/berkas_3d_v2.png';
 import HasilPemeriksaan from '../components/HasilPemeriksaan';
 import AktivitasTerbaru from '../components/AktivitasTerbaru';
 import { ambilSemuaSpjDb } from '../services/spjService';
-
-export default function Dashboard({ activeRole }) {
+export default function Dashboard({ activeRole, activeUser }) {
   const [activeTab, setActiveTab] = useState(activeRole === 'Pegawai' ? 'pemeriksaan' : 'statistik'); // 'statistik' | 'pemeriksaan'
   const [daftarSpj, setDaftarSpj] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('ALL');
@@ -373,7 +372,7 @@ export default function Dashboard({ activeRole }) {
       )}
 
       {activeTab === 'pemeriksaan' && (
-        <HasilPemeriksaan />
+        <HasilPemeriksaan activeRole={activeRole} activeUser={activeUser} />
       )}
     </div>
   );
