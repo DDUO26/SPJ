@@ -676,18 +676,31 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
 
 
   const renderPegawaiView = () => {
-    const myStat = filteredPegawaiStats.find(p => p.nama === activeUser?.nama);
+    let myStat = filteredPegawaiStats.find(p => p.nama === activeUser?.nama);
+    if (!myStat && activeUser?.nama) {
+       myStat = filteredPegawaiStats.find(p => 
+          p.nama.toLowerCase().includes(activeUser.nama.toLowerCase()) || 
+          activeUser.nama.toLowerCase().includes(p.nama.toLowerCase())
+       );
+    }
+
     if (!myStat) {
       return (
         <div className="bg-white rounded-[2rem] p-8 shadow-sm text-center border border-slate-200">
           <AlertCircle size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-xl font-bold text-slate-800">Data Tidak Ditemukan</h3>
-          <p className="text-slate-500 mt-2">Tidak ada data SPJ untuk Anda saat ini.</p>
+          <p className="text-slate-500 mt-2">Tidak ada data SPJ untuk akun "{activeUser?.nama}" saat ini. Pastikan nama akun login sama dengan nama di Master Data Pegawai.</p>
         </div>
       );
     }
     
-    const mySpjs = combinedSpjList.filter(s => s.pegawaiNama === activeUser?.nama);
+    const mySpjs = combinedSpjList.filter(s => {
+       if (s.pegawaiNama === activeUser?.nama || s.pegawaiNama === myStat.nama) return true;
+       if (Array.isArray(s.pegawaiList) && activeUser?.nama && s.pegawaiList.some(n => n.toLowerCase().includes(activeUser.nama.toLowerCase()))) return true;
+       if (Array.isArray(s.pegawaiList) && s.pegawaiList.includes(myStat.nama)) return true;
+       return false;
+    });
+
     const actionNeededSpjs = mySpjs.filter(s => {
        const missingCount = CHECKLIST_ITEMS.filter(k => !k.optional && (!s.checklist || !s.checklist[k.key])).length;
        const hasCatatan = s.catatan && s.catatan.trim() !== '';
