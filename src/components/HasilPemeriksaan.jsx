@@ -34,6 +34,7 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
   const [selectedPegawaiDetail, setSelectedPegawaiDetail] = useState(null);
   const [activeTab, setActiveTab] = useState('Daftar Kelengkapan');
   const [detailKekurangan, setDetailKekurangan] = useState(null);
+  const [modalBulan, setModalBulan] = useState('ALL');
 
   useEffect(() => {
     tarikSemuaData();
@@ -207,7 +208,16 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
      }
 
      const result = daftarPegawai.map(peg => {
-        const mySpj = filteredSpj.filter(s => s.pegawaiNama === peg.nama);
+        const mySpj = filteredSpj.filter(s => {
+           const matchMain = s.pegawaiNama === peg.nama || 
+                             (s.pegawaiNama && s.pegawaiNama.toLowerCase().includes(peg.nama.toLowerCase())) ||
+                             (s.pegawaiNama && peg.nama.toLowerCase().includes(s.pegawaiNama.toLowerCase()));
+           const matchList = Array.isArray(s.pegawaiList) && s.pegawaiList.some(n => 
+              n === peg.nama || n.toLowerCase().includes(peg.nama.toLowerCase()) || peg.nama.toLowerCase().includes(n.toLowerCase())
+           );
+           return matchMain || matchList;
+        });
+        
         let totalKegiatan = mySpj.length;
         let totalDana = 0;
         let spjKurang = 0;
@@ -324,7 +334,7 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  const renderModal = () => {
+  const renderAdminModal = () => {
     if (!selectedPegawaiDetail) return null;
     const peg = selectedPegawaiDetail;
     const mySpj = combinedSpjList.filter(s => s.pegawaiNama === peg.nama && (selectedBulan === 'ALL' || (s.tanggal && `${BULAN_FULL[new Date(s.tanggal).getMonth()]} ${new Date(s.tanggal).getFullYear()}` === selectedBulan)));
@@ -663,134 +673,96 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200 flex items-center justify-center h-64">
-        <div className="text-center">
-          <RefreshCw size={28} className="animate-spin text-indigo-500 mx-auto mb-3" />
-          <p className="text-sm text-slate-500 font-medium">Memuat Hasil Pemeriksaan...</p>
-        </div>
-      </div>
-    );
-  }
-
-
-  const renderPegawaiView = () => {
-    let myStat = filteredPegawaiStats.find(p => p.nama === activeUser?.nama);
-    if (!myStat && activeUser?.nama) {
-       myStat = filteredPegawaiStats.find(p => 
-          p.nama.toLowerCase().includes(activeUser.nama.toLowerCase()) || 
-          activeUser.nama.toLowerCase().includes(p.nama.toLowerCase())
-       );
-    }
-
-    if (!myStat) {
-      return (
-        <div className="bg-white rounded-[2rem] p-8 shadow-sm text-center border border-slate-200">
-          <AlertCircle size={48} className="mx-auto text-slate-300 mb-4" />
-          <h3 className="text-xl font-bold text-slate-800">Data Tidak Ditemukan</h3>
-          <p className="text-slate-500 mt-2">Tidak ada data SPJ untuk akun "{activeUser?.nama}" saat ini. Pastikan nama akun login sama dengan nama di Master Data Pegawai.</p>
-        </div>
-      );
-    }
+  const renderPegawaiModal = () => {
+    if (!selectedPegawaiDetail) return null;
+    const peg = selectedPegawaiDetail;
     
-    const mySpjs = combinedSpjList.filter(s => {
-       if (s.pegawaiNama === activeUser?.nama || s.pegawaiNama === myStat.nama) return true;
-       if (Array.isArray(s.pegawaiList) && activeUser?.nama && s.pegawaiList.some(n => n.toLowerCase().includes(activeUser.nama.toLowerCase()))) return true;
-       if (Array.isArray(s.pegawaiList) && s.pegawaiList.includes(myStat.nama)) return true;
-       return false;
+    const mySpjAll = combinedSpjList.filter(s => {
+       const pegNama = peg.nama;
+       const matchMain = s.pegawaiNama === pegNama || 
+                         (s.pegawaiNama && s.pegawaiNama.toLowerCase().includes(pegNama.toLowerCase())) ||
+                         (s.pegawaiNama && pegNama.toLowerCase().includes(s.pegawaiNama.toLowerCase()));
+       const matchList = Array.isArray(s.pegawaiList) && s.pegawaiList.some(n => 
+          n === pegNama || n.toLowerCase().includes(pegNama.toLowerCase()) || pegNama.toLowerCase().includes(n.toLowerCase())
+       );
+       return matchMain || matchList;
     });
 
-    const actionNeededSpjs = mySpjs.filter(s => {
+    const mySpj = mySpjAll.filter(s => {
+       if (modalBulan === 'ALL') return true;
+       if (!s.tanggal) return false;
+       const blnStr = `${BULAN_FULL[new Date(s.tanggal).getMonth()]} ${new Date(s.tanggal).getFullYear()}`;
+       return blnStr === modalBulan;
+    });
+
+    const actionNeededSpjs = mySpj.filter(s => {
        const missingCount = CHECKLIST_ITEMS.filter(k => !k.optional && (!s.checklist || !s.checklist[k.key])).length;
        const hasCatatan = s.catatan && s.catatan.trim() !== '';
        return missingCount > 0 || hasCatatan;
     });
 
-    const isAllComplete = actionNeededSpjs.length === 0;
-
     return (
-      <div className="w-full flex flex-col space-y-6 animate-in fade-in duration-300">
-        <div className="flex gap-4 border-b border-slate-200">
-          <button 
-             onClick={() => setActiveTab('Daftar Kelengkapan')}
-             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab !== 'Riwayat' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-          >
-             To-Do List Perbaikan
-          </button>
-          <button 
-             onClick={() => setActiveTab('Riwayat')}
-             className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'Riwayat' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-          >
-             Semua Riwayat Kegiatan
-          </button>
-        </div>
-
-        {activeTab === 'Riwayat' ? (
-           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
-              <div className="flex justify-between items-center mb-6">
-                 <h3 className="font-bold text-slate-800">Riwayat Kelengkapan Anda</h3>
-                 <button onClick={() => setSelectedPegawaiDetail(myStat)} className="text-xs font-bold bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors">Lihat Detail Matrix</button>
-              </div>
-              <div className="flex flex-col md:flex-row gap-6 items-center bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                 <div className="text-center flex-1">
-                    <p className="text-3xl font-black text-slate-800">{myStat.totalKegiatan}</p>
-                    <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Total Kegiatan</p>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 print:hidden animate-in fade-in duration-200">
+        <div className="bg-slate-50 rounded-[2rem] w-full max-w-3xl shadow-2xl flex flex-col h-[85vh] max-h-[800px] overflow-hidden">
+           {/* Modal Header */}
+           <div className="flex justify-between items-center p-5 sm:p-6 bg-white border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-4">
+                 <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center font-bold text-lg ${getAvatarColor(peg.nama)} shadow-sm shrink-0`}>
+                    {getInitials(peg.nama)}
                  </div>
-                 <div className="w-px h-12 bg-slate-200 hidden md:block"></div>
-                 <div className="text-center flex-1">
-                    <p className="text-3xl font-black text-emerald-500">{myStat.totalKegiatan - myStat.berkasKurang - myStat.belumInput}</p>
-                    <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Kegiatan Lengkap</p>
-                 </div>
-                 <div className="w-px h-12 bg-slate-200 hidden md:block"></div>
-                 <div className="text-center flex-1">
-                    <p className="text-3xl font-black text-rose-500">{myStat.berkasKurang + myStat.belumInput}</p>
-                    <p className="text-[10px] font-bold uppercase text-slate-400 mt-1">Belum Lengkap</p>
+                 <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-800 leading-tight mb-0.5">{peg.nama}</h3>
+                    <p className="text-xs sm:text-sm text-slate-500 font-medium leading-tight">{peg.jabatan || 'Pegawai'}</p>
                  </div>
               </div>
+              <button onClick={() => setSelectedPegawaiDetail(null)} className="p-2 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 text-slate-400 transition-colors shadow-sm">
+                 <XCircle size={20}/>
+              </button>
            </div>
-        ) : (
-           <>
-              {isAllComplete ? (
-                 <div className="bg-emerald-500 rounded-3xl p-6 text-white shadow-lg flex items-center gap-6">
-                    <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm hidden sm:block">
-                       <CheckCircle size={32} className="text-white" />
-                    </div>
-                    <div>
-                       <h2 className="text-xl sm:text-2xl font-black mb-1">Luar Biasa!</h2>
-                       <p className="text-emerald-50 text-xs sm:text-sm font-medium">Seluruh SPJ kegiatan Anda sudah lengkap dan terverifikasi dengan baik.</p>
-                    </div>
+
+           {/* Modal Body */}
+           <div className="flex-1 flex flex-col p-5 sm:p-6 overflow-hidden">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 shrink-0 gap-3">
+                 <h4 className="font-bold text-slate-800 text-base">To-Do List Perbaikan</h4>
+                 {/* Filter Bulan Dropdown */}
+                 <div className="relative w-full sm:w-48">
+                    <select 
+                       value={modalBulan} 
+                       onChange={(e) => setModalBulan(e.target.value)}
+                       className="pl-4 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none hover:bg-slate-50 appearance-none w-full cursor-pointer shadow-sm"
+                    >
+                       <option value="ALL">Semua Bulan</option>
+                       {listBulanOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    <ChevronDown size={14} className="absolute right-3 top-2.5 text-slate-400 pointer-events-none" />
+                 </div>
+              </div>
+
+              {actionNeededSpjs.length === 0 ? (
+                 <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-200 border-dashed text-center p-8">
+                    <CheckCircle size={48} className="text-emerald-400 mb-4" />
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">Luar Biasa!</h3>
+                    <p className="text-sm text-slate-500">Tidak ada SPJ yang perlu diperbaiki untuk bulan ini.</p>
                  </div>
               ) : (
-                 <div className="bg-rose-500 rounded-3xl p-6 text-white shadow-lg flex items-center gap-6">
-                    <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm hidden sm:block">
-                       <AlertCircle size={32} className="text-white" />
-                    </div>
-                    <div>
-                       <h2 className="text-xl sm:text-2xl font-black mb-1">Tindakan Diperlukan</h2>
-                       <p className="text-rose-50 text-xs sm:text-sm font-medium">Ada {actionNeededSpjs.length} kegiatan yang berkasnya kurang atau memiliki catatan revisi dari admin.</p>
-                    </div>
-                 </div>
-              )}
-
-              {!isAllComplete && (
-                 <div className="space-y-4 mt-2">
+                 <div className="flex-1 overflow-y-auto pr-2 scrollbar-thin space-y-3">
                     {actionNeededSpjs.map((spj, idx) => {
                        const missingItems = CHECKLIST_ITEMS.filter(k => !k.optional && (!spj.checklist || !spj.checklist[k.key])).map(k => k.label);
                        return (
-                          <div key={idx} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-start md:items-center hover:border-indigo-300 transition-colors cursor-pointer" onClick={() => setSelectedPegawaiDetail(myStat)}>
+                          <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-start hover:border-indigo-300 transition-colors">
                              <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1.5">
                                    <Calendar size={14} className="text-slate-400" />
-                                   <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">{spj.tanggal_format}</span>
+                                   <span className="text-[11px] font-bold text-slate-500 uppercase bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">{spj.tanggal_format || (spj.tanggal ? new Date(spj.tanggal).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : 'Tanpa Tanggal')}</span>
                                 </div>
-                                <h4 className="font-bold text-slate-800 text-base leading-tight">{spj.kegiatan}</h4>
+                                <h4 className="font-bold text-slate-800 text-sm leading-tight">{spj.kegiatan}</h4>
+                                <p className="text-[11px] text-slate-500 mt-1 line-clamp-1">{spj.program}</p>
                              </div>
                              
-                             <div className="flex flex-col gap-2 w-full md:w-1/2">
+                             <div className="flex flex-col gap-2 w-full sm:w-1/2 shrink-0">
                                 {missingItems.length > 0 && (
-                                   <div className="bg-rose-50 px-3 py-2.5 rounded-xl flex items-start gap-2 border border-rose-100">
-                                      <FileX size={16} className="text-rose-500 mt-0.5 shrink-0" />
+                                   <div className="bg-rose-50 px-3 py-2 rounded-xl flex items-start gap-2 border border-rose-100">
+                                      <FileX size={14} className="text-rose-500 mt-0.5 shrink-0" />
                                       <div>
                                          <p className="text-[10px] font-bold text-rose-700 uppercase mb-0.5">Berkas Kurang:</p>
                                          <p className="text-[11px] text-rose-600 font-bold leading-tight">{missingItems.join(', ')}</p>
@@ -799,8 +771,8 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
                                 )}
                                 
                                 {spj.catatan && spj.catatan.trim() !== '' && (
-                                   <div className="bg-amber-50 px-3 py-2.5 rounded-xl flex items-start gap-2 border border-amber-100">
-                                      <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                                   <div className="bg-amber-50 px-3 py-2 rounded-xl flex items-start gap-2 border border-amber-100">
+                                      <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
                                       <div>
                                          <p className="text-[10px] font-bold text-amber-700 uppercase mb-0.5">Catatan Admin:</p>
                                          <p className="text-[11px] text-amber-700 font-bold leading-tight">{spj.catatan}</p>
@@ -813,23 +785,24 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
                     })}
                  </div>
               )}
-           </>
-        )}
+           </div>
+        </div>
       </div>
     );
   };
 
-
-  if (activeRole === 'Pegawai') {
+  if (loading) {
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {renderPegawaiView()}
-        {renderModal()}
+      <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200 flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw size={28} className="animate-spin text-indigo-500 mx-auto mb-3" />
+          <p className="text-sm text-slate-500 font-medium">Memuat Hasil Pemeriksaan...</p>
+        </div>
       </div>
     );
   }
 
-    return (
+  return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* 5 SUMMARY CARDS */}
@@ -1002,7 +975,7 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
                }
 
                return (
-                  <div key={peg.id} onClick={() => setSelectedPegawaiDetail(peg)} className={`p-5 rounded-2xl border ${cardClass} relative flex flex-col justify-between shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_20px_-6px_rgba(6,81,237,0.1)] transition-shadow bg-white cursor-pointer`}>
+                  <div key={peg.id} onClick={() => { setSelectedPegawaiDetail(peg); setModalBulan(selectedBulan); }} className={`p-5 rounded-2xl border ${cardClass} relative flex flex-col justify-between shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] hover:shadow-[0_8px_20px_-6px_rgba(6,81,237,0.1)] transition-shadow bg-white cursor-pointer`}>
                      {/* Bell */}
                      <Bell size={16} className={`absolute top-5 right-5 ${bellClass} ${!isGreen ? 'fill-current' : 'fill-current opacity-20'}`} />
                      
@@ -1076,7 +1049,7 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
          </button>
       </div>
 
-      {renderModal()}
+      {activeRole === 'Admin' ? renderAdminModal() : renderPegawaiModal()}
     </div>
   );
 }

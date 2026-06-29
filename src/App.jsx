@@ -35,7 +35,7 @@ export default function App() {
   const activeRole = currentUser?.peran || 'Pegawai';
 
   useEffect(() => {
-    if (activeRole === 'Pegawai' && !['Dashboard', 'Kegiatan', 'Master Data'].includes(activeMenu)) {
+    if (activeRole === 'Pegawai' && !['Dashboard', 'Daftar POA', 'Master Data'].includes(activeMenu)) {
       setActiveMenu('Dashboard');
     }
   }, [activeRole, activeMenu]);
@@ -53,7 +53,7 @@ export default function App() {
   const menuItems = [
     { name: 'Dashboard', icon: <Home size={20} /> },
     { name: 'SPJ', icon: <FileText size={20} /> },
-    { name: 'Kegiatan', icon: <Activity size={20} /> },
+    { name: 'Daftar POA', icon: <Activity size={20} /> },
     { name: 'Master Data', icon: <Database size={20} /> },
     { name: 'Dokumen', icon: <Folder size={20} /> },
     { name: 'Verifikasi', icon: <CheckCircle size={20} /> },
@@ -64,7 +64,7 @@ export default function App() {
 
   const filteredMenuItems = menuItems.filter(item => {
     if (activeRole === 'Pegawai') {
-      return ['Dashboard', 'Kegiatan', 'Master Data'].includes(item.name);
+      return ['Dashboard', 'Daftar POA', 'Master Data'].includes(item.name);
     }
     return true;
   });
@@ -203,7 +203,7 @@ export default function App() {
           {activeMenu === 'Dashboard' && <Dashboard activeRole={activeRole} activeUser={currentUser} />}
           {activeMenu === 'Master Data' && <MasterData activeRole={activeRole} />}
           {activeMenu === 'SPJ' && <Sppd />}
-          {activeMenu === 'Kegiatan' && <Kegiatan activeRole={activeRole} />}
+          {activeMenu === 'Daftar POA' && <Kegiatan activeRole={activeRole} />}
           {activeMenu === 'Verifikasi' && <Verifikasi />}
           {activeMenu === 'Laporan' && <Laporan />}
           {activeMenu === 'Pengaturan' && <Pengaturan />}
