@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Upload, FileSpreadsheet, Trash2, Edit, Activity, 
   Database, AlertCircle, CheckCircle, Printer, 
@@ -46,6 +46,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
   const [printPetugas, setPrintPetugas] = useState('');
   const [jenisDokumen, setJenisDokumen] = useState('SPPD');
   const [nomorSppd, setNomorSppd] = useState('');
+  const [selectedExtraActivities, setSelectedExtraActivities] = useState([]);
 
   useEffect(() => {
     tarikData();
@@ -189,6 +190,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
     setPrintPetugas(daftarNamaPetugas.length > 0 ? daftarNamaPetugas[0] : '');
     setJenisDokumen('SPPD');
     setNomorSppd('');
+    setSelectedExtraActivities([]);
   };
 
   const eksekusiCetak = () => {
@@ -285,6 +287,59 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
 
   const toggleKegiatan = (keg) => setExpandedKegiatan(prev => ({ ...prev, [keg]: !prev[keg] }));
   const pegawaiCetak = getDataPegawai(printPetugas);
+
+  const relatedActivities = useMemo(() => {
+    if (!printData || !printPetugas || jenisDokumen !== 'SPPD') return [];
+    return daftarKegiatan.filter(k => 
+      k.id !== printData.id &&
+      k.bulan === printData.bulan &&
+      k.program === printData.program &&
+      k.kegiatan === printData.kegiatan &&
+      k.pegawai && k.pegawai.includes(printPetugas)
+    ).sort((a,b) => {
+      const dateA = new Date(a.tanggal ? `${getTahun(a.bulan)}-${String(a.bulan).split(' ')[0]}-${a.tanggal}` : 0);
+      const dateB = new Date(b.tanggal ? `${getTahun(b.bulan)}-${String(b.bulan).split(' ')[0]}-${b.tanggal}` : 0);
+      return dateA - dateB;
+    });
+  }, [printData, printPetugas, daftarKegiatan, jenisDokumen]);
+
+  const perjalananList = useMemo(() => {
+    if (!printData) return [];
+    return [printData, ...selectedExtraActivities].sort((a,b) => {
+      const dateA = new Date(a.tanggal ? `${getTahun(a.bulan)}-${String(a.bulan).split(' ')[0]}-${a.tanggal}` : 0);
+      const dateB = new Date(b.tanggal ? `${getTahun(b.bulan)}-${String(b.bulan).split(' ')[0]}-${b.tanggal}` : 0);
+      return dateA - dateB;
+    });
+  }, [printData, selectedExtraActivities]);
+
+  const hitungLamaPerjalananPrint = () => {
+    const uniqueDates = new Set(perjalananList.map(p => `${p.tanggal}-${p.bulan}`));
+    const length = uniqueDates.size;
+    if (length === 0) return '1 (Satu) Hari';
+    const words = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima'];
+    return `${length} (${words[length] || length}) Hari`;
+  };
+
+  const isConsecutiveAllowed = (keg) => {
+    if (selectedExtraActivities.length >= 2) return false;
+    
+    const getMs = (tgl, bln) => {
+      const tahun = bln ? (bln.split(' ')[1] || new Date().getFullYear()) : new Date().getFullYear();
+      const namaBulan = bln ? bln.split(' ')[0].toUpperCase() : 'JANUARI';
+      const mapB = { JANUARI: 0, FEBRUARI: 1, MARET: 2, APRIL: 3, MEI: 4, JUNI: 5, JULI: 6, AGUSTUS: 7, SEPTEMBER: 8, OKTOBER: 9, NOVEMBER: 10, DESEMBER: 11 };
+      return new Date(tahun, mapB[namaBulan] || 0, parseInt(tgl) || 1).getTime();
+    };
+
+    const listToCheck = [printData, ...selectedExtraActivities, keg].sort((a,b) => getMs(a.tanggal, a.bulan) - getMs(b.tanggal, b.bulan));
+    
+    for (let i = 0; i < listToCheck.length - 1; i++) {
+      const ms1 = getMs(listToCheck[i].tanggal, listToCheck[i].bulan);
+      const ms2 = getMs(listToCheck[i+1].tanggal, listToCheck[i+1].bulan);
+      const diffDays = Math.round((ms2 - ms1) / (1000 * 60 * 60 * 24));
+      if (diffDays > 1) return false;
+    }
+    return true;
+  };
 
   return (
     <div className="space-y-6 relative">
@@ -500,8 +555,42 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                 )}
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                <label className="block text-sm font-bold text-slate-700 mb-2">3. Nomor Surat Lampiran</label>
+              {jenisDokumen === 'SPPD' && relatedActivities.length > 0 && (
+                <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl mt-4">
+                  <label className="block text-sm font-bold text-emerald-800 mb-2">3. Tambahkan Tujuan Lain (Maks 2 Hari Beriringan)</label>
+                  <p className="text-[10px] text-emerald-600 mb-3 leading-tight">Pilih kegiatan lain untuk digabungkan. Hanya tanggal yang berurutan/beriringan yang diizinkan.</p>
+                  <div className="space-y-2 max-h-[120px] overflow-y-auto pr-2 scrollbar-thin">
+                    {relatedActivities.map(keg => {
+                      const isChecked = selectedExtraActivities.some(a => a.id === keg.id);
+                      const isDisabled = !isChecked && !isConsecutiveAllowed(keg);
+                      return (
+                        <label key={keg.id} className={`flex items-start gap-3 p-3 rounded-xl border ${isChecked ? 'border-emerald-500 bg-emerald-100' : 'border-slate-200 bg-white'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-emerald-300'}`}>
+                          <input 
+                            type="checkbox" 
+                            className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedExtraActivities(prev => prev.filter(a => a.id !== keg.id));
+                              } else {
+                                setSelectedExtraActivities(prev => [...prev, keg]);
+                              }
+                            }}
+                          />
+                          <div className="flex-1 text-xs">
+                            <p className="font-bold text-slate-800">{formatTgl(keg.tanggal, keg.bulan)}</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">{keg.desa}</p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">{jenisDokumen === 'SPPD' && relatedActivities.length > 0 ? '4' : '3'}. Nomor Surat Lampiran</label>
                 <div className="flex items-center gap-2">
                   <input type="text" value={nomorSppd} onChange={(e) => setNomorSppd(e.target.value)} placeholder="No" className="w-20 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none text-center focus:border-indigo-500 bg-white" />
                   <span className="text-sm font-bold text-slate-600">/440/DINKES-MT/PKM-SLN/SPPD-DD/{printData ? `${getBulanRomawi(printData.bulan)}-${getTahun(printData.bulan)}` : 'VI-2026'}</span>
@@ -583,12 +672,12 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                 <tr>
                   <td className="border border-black text-center align-top">6</td>
                   <td className="border border-black align-top">a. Tempat Berangkat<br/><br/>b. Tempat Tujuan</td>
-                  <td colSpan="2" className="border border-black align-top">a. Puskesmas Silian Raya<br/><br/>b. {formatDesa(printData.desa)}</td>
+                  <td colSpan="2" className="border border-black align-top">a. Puskesmas Silian Raya<br/><br/>b. {perjalananList.map(p => formatDesa(p.desa)).join(', ')}</td>
                 </tr>
                 <tr>
                   <td className="border border-black text-center align-top">7</td>
                   <td className="border border-black align-top">a. Lama Perjalanan Dinas<br/>b. Tanggal Berangkat<br/>c. Tanggal Harus Kembali/Tiba di Tempat Baru *)</td>
-                  <td colSpan="2" className="border border-black align-top">a. 1 (Satu) Hari<br/>b. {formatTgl(printData.tanggal, printData.bulan)}<br/>c. {formatTgl(printData.tanggal, printData.bulan)}</td>
+                  <td colSpan="2" className="border border-black align-top">a. {hitungLamaPerjalananPrint()}<br/>b. {formatTgl(perjalananList[0]?.tanggal, perjalananList[0]?.bulan)}<br/>c. {formatTgl(perjalananList[perjalananList.length - 1]?.tanggal, perjalananList[perjalananList.length - 1]?.bulan)}</td>
                 </tr>
                 <tr>
                   <td className="border border-black text-center align-top" rowSpan="3">8</td>
@@ -634,59 +723,86 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                       </div>
                     </td>
                   </tr>
+                  {/* Dynamic Destination Rows */}
+                  {perjalananList.map((r, idx) => {
+                    const romawi = ['II', 'III', 'IV', 'V', 'VI'];
+                    const isLastDest = idx === perjalananList.length - 1;
+                    const nextDest = isLastDest ? 'Puskesmas Silian Raya' : formatDesa(perjalananList[idx + 1].desa);
+                    return (
+                      <tr key={idx}>
+                        <td className="border border-black p-2 align-top w-1/2 h-[160px]">
+                          <div className="flex flex-col justify-between h-full">
+                            <table className="w-full"><tbody>
+                              <tr><td className="w-[135px] align-top">{romawi[idx]}. Tiba di</td><td className="align-top font-bold">: {formatDesa(r.desa)}</td></tr>
+                              <tr><td className="align-top">Pada Tanggal</td><td className="align-top">: {formatTgl(r.tanggal, r.bulan)}</td></tr>
+                              <tr><td className="align-top">Kepala</td><td className="align-top">: Desa {r.desa}</td></tr>
+                            </tbody></table>
+                            <div className="text-center w-full mt-auto pt-6">{getKepalaDesa(r.desa)}</div>
+                          </div>
+                        </td>
+                        <td className="border border-black p-2 align-top w-1/2 h-[160px]">
+                          <div className="flex flex-col justify-between h-full">
+                            <table className="w-full"><tbody>
+                              <tr><td className="w-[135px] align-top">Berangkat dari</td><td className="align-top font-bold">: {formatDesa(r.desa)}</td></tr>
+                              <tr><td className="align-top">Ke</td><td className="align-top">: {nextDest}</td></tr>
+                              <tr><td className="align-top">Pada Tanggal</td><td className="align-top">: {formatTgl(r.tanggal, r.bulan)}</td></tr>
+                              <tr><td className="align-top">Kepala</td><td className="align-top">: Desa {r.desa}</td></tr>
+                            </tbody></table>
+                            <div className="text-center w-full mt-auto pt-6">{getKepalaDesa(r.desa)}</div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Empty Rows Padding */}
+                  {Array.from({ length: Math.max(0, 3 - perjalananList.length) }).map((_, emptyIdx) => {
+                    const currentIdx = perjalananList.length + emptyIdx;
+                    const romawi = ['II', 'III', 'IV', 'V', 'VI'];
+                    return (
+                      <tr key={`empty-${emptyIdx}`}>
+                        <td className="border border-black p-2 align-top w-1/2 h-[160px]">
+                          <div className="flex flex-col justify-between h-full">
+                            <table className="w-full"><tbody>
+                              <tr><td className="w-[135px] align-top">{romawi[currentIdx]}. Tiba di</td><td className="align-top">: ...........................................</td></tr>
+                              <tr><td className="align-top">Pada Tanggal</td><td className="align-top">: ...........................................</td></tr>
+                              <tr><td className="align-top">Kepala</td><td className="align-top">: </td></tr>
+                            </tbody></table>
+                            <div className="text-center w-full mt-auto pt-6">(...................................................)</div>
+                          </div>
+                        </td>
+                        <td className="border border-black p-2 align-top w-1/2 h-[160px]">
+                          <div className="flex flex-col justify-between h-full">
+                            <table className="w-full"><tbody>
+                              <tr><td className="w-[135px] align-top">Berangkat dari</td><td className="align-top">: ...........................................</td></tr>
+                              <tr><td className="align-top">Ke</td><td className="align-top">: ...........................................</td></tr>
+                              <tr><td className="align-top">Pada Tanggal</td><td className="align-top">: ...........................................</td></tr>
+                              <tr><td className="align-top">Kepala</td><td className="align-top">: </td></tr>
+                            </tbody></table>
+                            <div className="text-center w-full mt-auto pt-6">(...................................................)</div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Final Return Block */}
                   <tr>
                     <td className="border border-black p-2 align-top w-1/2 h-[160px]">
                       <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">II. Tiba di</td><td className="align-top font-bold">: {formatDesa(printData.desa)}</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: {formatTgl(printData.tanggal, printData.bulan)}</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: Desa {printData.desa}</td></tr></tbody></table>
-                        <div className="text-center w-full mt-auto pt-6">{getKepalaDesa(printData.desa)}</div>
-                      </div>
-                    </td>
-                    <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">Berangkat dari</td><td className="align-top font-bold">: {formatDesa(printData.desa)}</td></tr><tr><td className="align-top">Ke</td><td className="align-top">: Puskesmas Silian Raya</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: {formatTgl(printData.tanggal, printData.bulan)}</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: Desa {printData.desa}</td></tr></tbody></table>
-                        <div className="text-center w-full mt-auto pt-6">{getKepalaDesa(printData.desa)}</div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">III. Tiba di</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: </td></tr></tbody></table>
-                        <div className="text-center w-full mt-auto pt-6">(...................................................)</div>
-                      </div>
-                    </td>
-                    <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">Berangkat dari</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Ke</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: </td></tr></tbody></table>
-                        <div className="text-center w-full mt-auto pt-6">(...................................................)</div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">IV. Tiba di</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: </td></tr></tbody></table>
-                        <div className="text-center w-full mt-auto pt-6">(...................................................)</div>
-                      </div>
-                    </td>
-                    <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">Berangkat dari</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Ke</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: ...........................................</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: </td></tr></tbody></table>
-                        <div className="text-center w-full mt-auto pt-6">(...................................................)</div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="flex flex-col justify-between h-full">
-                        <table className="w-full"><tbody><tr><td className="w-[135px] align-top">V. Tiba di</td><td className="align-top">: Puskesmas Silian Raya</td></tr><tr><td className="align-top">Pada Tanggal</td><td className="align-top">: {formatTgl(printData.tanggal, printData.bulan)}</td></tr><tr><td className="align-top">Kepala</td><td className="align-top">: Puskesmas Silian Raya</td></tr></tbody></table>
+                        <table className="w-full"><tbody>
+                          <tr><td className="w-[135px] align-top">V. Tiba di</td><td className="align-top">: Puskesmas Silian Raya</td></tr>
+                          <tr><td className="align-top">Pada Tanggal</td><td className="align-top">: {formatTgl(perjalananList[perjalananList.length - 1]?.tanggal, perjalananList[perjalananList.length - 1]?.bulan)}</td></tr>
+                          <tr><td className="align-top">Kepala</td><td className="align-top">: Puskesmas Silian Raya</td></tr>
+                        </tbody></table>
                         <div className="text-center w-full mt-auto pt-6"><span className="font-bold underline">dr. Winda Marshella Tanuli</span><br/><span className="font-bold">NIP. 198312052011022001</span></div>
                       </div>
                     </td>
                     <td className="border border-black p-2 align-top w-1/2 h-[160px]">
-                      <div className="text-justify">Telah diperiksa dengan keterangan bahwa perjalanan tersebut diatas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam jangka waktu yang sesingkat-singkatnya.</div>
+                      <div className="text-justify mt-2">Telah diperiksa dengan keterangan bahwa perjalanan tersebut diatas benar dilakukan atas perintahnya dan semata-mata untuk kepentingan jabatan dalam jangka waktu yang sesingkat-singkatnya.</div>
                     </td>
                   </tr>
+
                   <tr><td colSpan="2" className="border border-black p-2 align-top"><span className="font-bold">VI. Catatan Lain-lain :</span></td></tr>
                   <tr><td colSpan="2" className="border border-black p-2 align-top text-justify"><span className="font-bold">VII. PERHATIAN</span><br/>PPK yang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan keuangan negara apabila menderita rugi akibat kesalahan, kelalaian dan kealpaannya.</td></tr>
                 </tbody>

@@ -9,6 +9,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, ResponsiveContainer 
 } from 'recharts';
+import Tilt from 'react-parallax-tilt';
 
 import imgBerkas3D from '../assets/berkas_3d_v2.png';
 import HasilPemeriksaan from '../components/HasilPemeriksaan';
@@ -141,68 +142,76 @@ export default function Dashboard({ activeRole, activeUser }) {
           {/* 4 KARTU STATISTIK ATAS */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* Kartu 1 - Biru */}
-            <div className="bg-blue-600 rounded-3xl p-6 shadow-lg shadow-blue-500/30 text-white relative overflow-hidden flex flex-col justify-between h-[140px]">
-              <div className="flex items-start gap-4">
-                <div className="bg-white p-3.5 rounded-2xl shrink-0 shadow-sm">
-                  <Hospital size={28} className="text-blue-600" />
+            <Tilt tiltMaxAngleX={10} tiltMaxAngleY={10} scale={1.02} transitionSpeed={2000} className="h-full w-full" glareEnable={true} glareMaxOpacity={0.3} glareColor="#ffffff" glarePosition="all" glareBorderRadius="24px">
+              <div className="bg-blue-600 rounded-3xl p-6 shadow-lg shadow-blue-500/30 text-white relative overflow-hidden flex flex-col justify-between h-[140px]">
+                <div className="flex items-start gap-4">
+                  <div className="bg-white p-3.5 rounded-2xl shrink-0 shadow-sm">
+                    <Hospital size={28} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-blue-100 text-[13px] font-medium mb-0.5">Total Puskesmas</p>
+                    <h3 className="text-4xl font-bold tracking-tight">0</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-blue-100 text-[13px] font-medium mb-0.5">Total Puskesmas</p>
-                  <h3 className="text-4xl font-bold tracking-tight">0</h3>
+                <div className="flex items-center gap-1.5 text-blue-200 text-xs font-medium ml-[68px]">
+                  Segera Hadir <ArrowUpRight size={14} />
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-blue-200 text-xs font-medium ml-[68px]">
-                Segera Hadir <ArrowUpRight size={14} />
-              </div>
-            </div>
+            </Tilt>
 
             {/* Kartu 2 - Hijau Pastel */}
-            <div className="bg-[#ECFDF5] rounded-3xl p-6 shadow-sm border border-emerald-100 flex flex-col justify-between h-[140px]">
-              <div className="flex items-start gap-4">
-                <div className="bg-emerald-500 p-3.5 rounded-2xl shrink-0 shadow-sm text-white">
-                  <FileCheck size={28} />
+            <Tilt tiltMaxAngleX={10} tiltMaxAngleY={10} scale={1.02} transitionSpeed={2000} className="h-full w-full" glareEnable={true} glareMaxOpacity={0.15} glareColor="#ffffff" glarePosition="all" glareBorderRadius="24px">
+              <div className="bg-[#ECFDF5] rounded-3xl p-6 shadow-sm border border-emerald-100 flex flex-col justify-between h-[140px]">
+                <div className="flex items-start gap-4">
+                  <div className="bg-emerald-500 p-3.5 rounded-2xl shrink-0 shadow-sm text-white">
+                    <FileCheck size={28} />
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[13px] font-medium mb-0.5">Total SPJ</p>
+                    <h3 className="text-4xl font-bold text-slate-800 tracking-tight">0</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-slate-500 text-[13px] font-medium mb-0.5">Total SPJ</p>
-                  <h3 className="text-4xl font-bold text-slate-800 tracking-tight">0</h3>
+                <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold ml-[68px]">
+                  Segera Hadir <ArrowUpRight size={14} />
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold ml-[68px]">
-                Segera Hadir <ArrowUpRight size={14} />
-              </div>
-            </div>
+            </Tilt>
 
             {/* Kartu 3 - Ungu Pastel */}
-            <div className="bg-[#EEF2FF] rounded-3xl p-6 shadow-sm border border-indigo-100 flex flex-col justify-between h-[140px]">
-              <div className="flex items-start gap-4">
-                <div className="bg-indigo-500 p-3.5 rounded-2xl shrink-0 shadow-sm text-white">
-                  <Folder size={28} />
+            <Tilt tiltMaxAngleX={10} tiltMaxAngleY={10} scale={1.02} transitionSpeed={2000} className="h-full w-full" glareEnable={true} glareMaxOpacity={0.15} glareColor="#ffffff" glarePosition="all" glareBorderRadius="24px">
+              <div className="bg-[#EEF2FF] rounded-3xl p-6 shadow-sm border border-indigo-100 flex flex-col justify-between h-[140px]">
+                <div className="flex items-start gap-4">
+                  <div className="bg-indigo-500 p-3.5 rounded-2xl shrink-0 shadow-sm text-white">
+                    <Folder size={28} />
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[13px] font-medium mb-0.5">Total Kegiatan</p>
+                    <h3 className="text-4xl font-bold text-slate-800 tracking-tight">0</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-slate-500 text-[13px] font-medium mb-0.5">Total Kegiatan</p>
-                  <h3 className="text-4xl font-bold text-slate-800 tracking-tight">0</h3>
+                <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold ml-[68px]">
+                  Segera Hadir <ArrowUpRight size={14} />
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold ml-[68px]">
-                Segera Hadir <ArrowUpRight size={14} />
-              </div>
-            </div>
+            </Tilt>
 
             {/* Kartu 4 - Oranye Pastel */}
-            <div className="bg-[#FFFBEB] rounded-3xl p-6 shadow-sm border border-amber-100 flex flex-col justify-between h-[140px]">
-              <div className="flex items-start gap-4">
-                <div className="bg-amber-500 p-3.5 rounded-2xl shrink-0 shadow-sm text-white">
-                  <FilePlus size={28} />
+            <Tilt tiltMaxAngleX={10} tiltMaxAngleY={10} scale={1.02} transitionSpeed={2000} className="h-full w-full" glareEnable={true} glareMaxOpacity={0.15} glareColor="#ffffff" glarePosition="all" glareBorderRadius="24px">
+              <div className="bg-[#FFFBEB] rounded-3xl p-6 shadow-sm border border-amber-100 flex flex-col justify-between h-[140px]">
+                <div className="flex items-start gap-4">
+                  <div className="bg-amber-500 p-3.5 rounded-2xl shrink-0 shadow-sm text-white">
+                    <FilePlus size={28} />
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-[13px] font-medium mb-0.5">Entri Data</p>
+                    <h3 className="text-4xl font-bold text-slate-800 tracking-tight">0</h3>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-slate-500 text-[13px] font-medium mb-0.5">Entri Data</p>
-                  <h3 className="text-4xl font-bold text-slate-800 tracking-tight">0</h3>
+                <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold ml-[68px]">
+                  Segera Hadir <ArrowUpRight size={14} />
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-semibold ml-[68px]">
-                Segera Hadir <ArrowUpRight size={14} />
-              </div>
-            </div>
+            </Tilt>
           </div>
 
           {/* BARIS TENGAH: KELENGKAPAN SPJ & AKTIVITAS */}
@@ -256,7 +265,9 @@ export default function Dashboard({ activeRole, activeUser }) {
 
                 {/* Gambar Tengah */}
                 <div className="flex items-end justify-center relative z-10 px-4 mt-8 md:mt-0 mx-auto w-[350px] lg:w-[450px]">
-                  <img src={imgBerkas3D} alt="Ilustrasi Berkas 3D" className="w-full h-auto object-contain mix-blend-multiply z-10 hover:-translate-y-2 transition-transform duration-500 scale-105" />
+                  <Tilt tiltMaxAngleX={15} tiltMaxAngleY={15} scale={1.05} transitionSpeed={2000} className="w-full">
+                    <img src={imgBerkas3D} alt="Ilustrasi Berkas 3D" className="w-full h-auto object-contain mix-blend-multiply z-10 hover:-translate-y-2 transition-transform duration-500 scale-105" />
+                  </Tilt>
                 </div>
 
                 {/* Bagian Kanan (Belum Lengkap) */}

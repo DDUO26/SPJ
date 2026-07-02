@@ -16,16 +16,13 @@ export default function Sppd() {
   const [daftarKegiatan, setDaftarKegiatan] = useState([]);
 
   // State Form
-  const [selectedKegiatanId, setSelectedKegiatanId] = useState('');
   const [pegawaiTerpilih, setPegawaiTerpilih] = useState(null);
-  const [desaTujuan, setDesaTujuan] = useState('');
   const [maksudPerjalanan, setMaksudPerjalanan] = useState('');
-  const [tanggalBerangkat, setTanggalBerangkat] = useState('');
   const [alatAngkut, setAlatAngkut] = useState('Mobil');
-  const [lamaPerjalanan, setLamaPerjalanan] = useState('1 (Satu) Hari');
   
-  // State untuk Info Hint Petugas
-  const [petugasDijadwalkan, setPetugasDijadwalkan] = useState('');
+  const [perjalananList, setPerjalananList] = useState([
+    { id: Date.now(), idKegiatan: '', desaTujuan: '', tanggal: '', petugasDijadwalkan: '' }
+  ]);
 
   useEffect(() => {
     const tarikData = async () => {
@@ -44,25 +41,27 @@ export default function Sppd() {
   // ==========================================
   // FUNGSI SINKRONISASI JADWAL -> FORM
   // ==========================================
-  const handlePilihKegiatan = (eOrId) => {
+  const handlePilihKegiatan = (index, eOrId) => {
     const idKegiatan = (eOrId && typeof eOrId === 'object' && 'target' in eOrId) ? eOrId.target.value : eOrId;
-    setSelectedKegiatanId(idKegiatan || '');
+    const newList = [...perjalananList];
+    newList[index].idKegiatan = idKegiatan || '';
     
     // Jika dropdown dikosongkan (pilih manual)
     if (!idKegiatan) {
-      setMaksudPerjalanan('');
-      setDesaTujuan('');
-      setTanggalBerangkat('');
-      setPetugasDijadwalkan('');
+      if (index === 0) setMaksudPerjalanan('');
+      newList[index].desaTujuan = '';
+      newList[index].tanggal = '';
+      newList[index].petugasDijadwalkan = '';
+      setPerjalananList(newList);
       return;
     }
 
     // Jika pilih jadwal, isi otomatis!
     const keg = daftarKegiatan.find(k => k.id === idKegiatan);
     if (keg) {
-      setMaksudPerjalanan(`${keg.program} - ${keg.kegiatan}`);
-      setDesaTujuan(keg.desa);
-      setPetugasDijadwalkan(keg.pegawai || 'Belum ada nama yang diinput di jadwal');
+      if (index === 0 && !maksudPerjalanan) setMaksudPerjalanan(`${keg.program} - ${keg.kegiatan}`);
+      newList[index].desaTujuan = keg.desa;
+      newList[index].petugasDijadwalkan = keg.pegawai || 'Belum ada nama yang diinput di jadwal';
 
       // Konversi Format Tanggal dari Excel (Contoh: "3" "JUNI 2026") menjadi format input kalender (2026-06-03)
       if (keg.tanggal && keg.bulan) {
@@ -77,15 +76,34 @@ export default function Sppd() {
         const angkaBulan = bulanMap[namaBulan] || '01';
         const angkaTanggal = String(keg.tanggal).padStart(2, '0');
         
-        setTanggalBerangkat(`${tahun}-${angkaBulan}-${angkaTanggal}`);
+        newList[index].tanggal = `${tahun}-${angkaBulan}-${angkaTanggal}`;
       }
     }
+    setPerjalananList(newList);
+  };
+
+  const tambahPerjalanan = () => {
+    if (perjalananList.length < 3) {
+      setPerjalananList([...perjalananList, { id: Date.now(), idKegiatan: '', desaTujuan: '', tanggal: '', petugasDijadwalkan: '' }]);
+    }
+  };
+
+  const hapusPerjalanan = (index) => {
+    const newList = [...perjalananList];
+    newList.splice(index, 1);
+    setPerjalananList(newList);
+  };
+
+  const ubahPerjalanan = (index, field, value) => {
+    const newList = [...perjalananList];
+    newList[index][field] = value;
+    setPerjalananList(newList);
   };
 
   useEffect(() => {
     const preselected = localStorage.getItem('preselectedActivityId');
     if (preselected && daftarKegiatan.length > 0) {
-      handlePilihKegiatan(preselected);
+      handlePilihKegiatan(0, preselected);
       const keg = daftarKegiatan.find(k => k.id === preselected);
       if (keg && keg.pegawai) {
         const listNama = keg.pegawai.split(',').map(p => p.trim()).filter(Boolean);
@@ -98,12 +116,21 @@ export default function Sppd() {
       }
       localStorage.removeItem('preselectedActivityId');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [daftarKegiatan, daftarPegawai]);
 
   const handlePilihPegawai = (e) => {
     const id = e.target.value;
     const pegawai = daftarPegawai.find(p => p.id === id);
     setPegawaiTerpilih(pegawai);
+  };
+
+  const hitungLamaPerjalanan = () => {
+    const uniqueDates = new Set(perjalananList.map(p => p.tanggal).filter(Boolean));
+    const length = uniqueDates.size;
+    if (length === 0) return '1 (Satu) Hari';
+    const words = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima'];
+    return `${length} (${words[length] || length}) Hari`;
   };
 
   const handleCetak = () => {
@@ -193,36 +220,14 @@ export default function Sppd() {
           </h3>
           <button 
             onClick={handleCetak}
-            disabled={!pegawaiTerpilih || !desaTujuan || !tanggalBerangkat}
+            disabled={!pegawaiTerpilih || !perjalananList[0]?.desaTujuan || !perjalananList[0]?.tanggal}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Printer size={18} /> Cetak Dokumen SPPD
           </button>
         </div>
 
-        {/* SEKSI OTOMATISASI JADWAL */}
-        <div className="mb-6 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl">
-          <label className="block text-sm font-bold text-indigo-900 mb-2 flex items-center gap-2">
-            <Zap size={16} className="text-amber-500 fill-amber-500" /> Tarik Data Otomatis dari Jadwal BOK
-          </label>
-          <select value={selectedKegiatanId} onChange={handlePilihKegiatan} className="w-full border border-indigo-200 rounded-xl px-4 py-3 text-sm bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
-            <option value="">-- Kosongkan untuk Input Manual / Pilih Jadwal yang Tersinkron --</option>
-            {daftarKegiatan.map(keg => (
-              <option key={keg.id} value={keg.id}>
-                Tgl {keg.tanggal} {keg.bulan} | {keg.desa} | {keg.kegiatan}
-              </option>
-            ))}
-          </select>
-          
-          {petugasDijadwalkan && (
-            <div className="mt-3 text-xs font-medium text-indigo-700 bg-indigo-100/60 p-3 rounded-xl border border-indigo-200 inline-block">
-              <span className="font-bold uppercase tracking-wider">Info Petugas Jadwal:</span><br/>
-              Berdasarkan jadwal, petugas yang ditugaskan di lokasi ini adalah: <span className="font-extrabold text-indigo-900 bg-white px-2 py-0.5 rounded ml-1">{petugasDijadwalkan}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-6">
           <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><User size={14}/> Pilih Pegawai yang Berangkat</label>
             <select value={pegawaiTerpilih ? pegawaiTerpilih.id : ''} onChange={handlePilihPegawai} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
@@ -233,33 +238,83 @@ export default function Sppd() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><MapPin size={14}/> Tujuan (Desa / Sekolah)</label>
-            <select value={desaTujuan} onChange={(e) => setDesaTujuan(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-              <option value="">-- Pilih Tujuan --</option>
-              <optgroup label="Desa">
-                {daftarDesa.map(desa => (
-                  <option key={desa.id} value={desa.namaDesa}>{desa.namaDesa}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Sekolah">
-                {daftarSekolah.map(sekolah => (
-                  <option key={sekolah.id} value={sekolah.namaSekolah}>{sekolah.namaSekolah}</option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><FileText size={14}/> Maksud Perjalanan Dinas</label>
-            <input type="text" value={maksudPerjalanan} onChange={(e) => setMaksudPerjalanan(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><Calendar size={14}/> Tanggal Berangkat & Kembali</label>
-            <input type="date" value={tanggalBerangkat} onChange={(e) => setTanggalBerangkat(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><Car size={14}/> Alat Angkut</label>
             <input type="text" value={alatAngkut} onChange={(e) => setAlatAngkut(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 flex items-center gap-1"><FileText size={14}/> Maksud Perjalanan Dinas</label>
+            <input type="text" value={maksudPerjalanan} onChange={(e) => setMaksudPerjalanan(e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Pelayanan Imunisasi Rutin Lengkap..." />
+          </div>
+        </div>
+
+        {/* SEKSI MULTI-TUJUAN */}
+        <div className="mb-2 flex justify-between items-center">
+          <h4 className="font-bold text-slate-800 flex items-center gap-2"><MapPin size={18}/> Daftar Tujuan Perjalanan</h4>
+          <button 
+            type="button" 
+            onClick={tambahPerjalanan}
+            disabled={perjalananList.length >= 3}
+            className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            + Tambah Tujuan (Max 3 Hari)
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {perjalananList.map((perjalanan, index) => (
+            <div key={perjalanan.id} className="p-5 bg-indigo-50/50 border border-indigo-100 rounded-2xl relative">
+              {perjalananList.length > 1 && (
+                <button 
+                  onClick={() => hapusPerjalanan(index)}
+                  className="absolute top-4 right-4 text-xs text-red-500 hover:text-red-700 font-bold bg-red-50 px-2 py-1 rounded"
+                >
+                  Hapus
+                </button>
+              )}
+              
+              <div className="mb-4 pr-16">
+                <label className="block text-xs font-bold text-indigo-900 mb-1.5 flex items-center gap-1">
+                  <Zap size={14} className="text-amber-500 fill-amber-500" /> Tarik Jadwal BOK (Tujuan {index + 1})
+                </label>
+                <select value={perjalanan.idKegiatan} onChange={(e) => handlePilihKegiatan(index, e)} className="w-full border border-indigo-200 rounded-xl px-4 py-2 text-sm bg-white text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                  <option value="">-- Pilih Jadwal / Input Manual --</option>
+                  {daftarKegiatan.map(keg => (
+                    <option key={keg.id} value={keg.id}>
+                      Tgl {keg.tanggal} {keg.bulan} | {keg.desa} | {keg.kegiatan}
+                    </option>
+                  ))}
+                </select>
+                {perjalanan.petugasDijadwalkan && (
+                  <div className="mt-2 text-[11px] text-indigo-700">
+                    Petugas Jadwal: <span className="font-bold">{perjalanan.petugasDijadwalkan}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Tujuan (Desa / Sekolah)</label>
+                  <select value={perjalanan.desaTujuan} onChange={(e) => ubahPerjalanan(index, 'desaTujuan', e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">-- Pilih Tujuan --</option>
+                    <optgroup label="Desa">
+                      {daftarDesa.map(desa => (
+                        <option key={desa.id} value={desa.namaDesa}>{desa.namaDesa}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Sekolah">
+                      {daftarSekolah.map(sekolah => (
+                        <option key={sekolah.id} value={sekolah.namaSekolah}>{sekolah.namaSekolah}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Tanggal</label>
+                  <input type="date" value={perjalanan.tanggal} onChange={(e) => ubahPerjalanan(index, 'tanggal', e.target.value)} className="w-full border border-slate-300 rounded-xl px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -289,7 +344,7 @@ export default function Sppd() {
                 <tbody>
                   <tr><td className="pr-2">Lembar Ke</td><td>:</td></tr>
                   <tr><td className="pr-2">Kode No</td><td>:</td></tr>
-                  <tr><td className="pr-2">Nomor</td><td>: DD/{tanggalBerangkat ? `${getBulanRomawiDariDate(tanggalBerangkat)}-${getTahunDariDate(tanggalBerangkat)}` : 'VI-2026'}/440/DINKES-MT/PKM-SLN/SPPD-</td></tr>
+                  <tr><td className="pr-2">Nomor</td><td>: DD/{perjalananList[0]?.tanggal ? `${getBulanRomawiDariDate(perjalananList[0].tanggal)}-${getTahunDariDate(perjalananList[0].tanggal)}` : 'VI-2026'}/440/DINKES-MT/PKM-SLN/SPPD-</td></tr>
                 </tbody>
               </table>
             </div>
@@ -342,7 +397,7 @@ export default function Sppd() {
                 </td>
                 <td className="border border-black p-2 align-top">
                   a. Puskesmas Silian Raya<br/><br/>
-                  b. {formatDesa(desaTujuan)}
+                  b. {perjalananList.map(p => formatDesa(p.desaTujuan)).filter(Boolean).join(', ')}
                 </td>
               </tr>
               <tr>
@@ -353,9 +408,9 @@ export default function Sppd() {
                   c. Tanggal Harus Kembali/Tiba di Tempat Baru *)
                 </td>
                 <td className="border border-black p-2 align-top">
-                  a. {lamaPerjalanan}<br/>
-                  b. {formatTanggalSurat(tanggalBerangkat)}<br/>
-                  c. {formatTanggalSurat(tanggalBerangkat)}
+                  a. {hitungLamaPerjalanan()}<br/>
+                  b. {formatTanggalSurat(perjalananList[0]?.tanggal)}<br/>
+                  c. {formatTanggalSurat(perjalananList[perjalananList.length - 1]?.tanggal)}
                 </td>
               </tr>
               <tr>
@@ -393,7 +448,7 @@ export default function Sppd() {
               <table className="mb-4">
                 <tbody>
                   <tr><td className="pr-4">Dikeluarkan di</td><td>: Silian</td></tr>
-                  <tr><td className="pr-4">Pada Tanggal</td><td>: {formatTanggalSurat(tanggalBerangkat)}</td></tr>
+                  <tr><td className="pr-4">Pada Tanggal</td><td>: {formatTanggalSurat(perjalananList[0]?.tanggal)}</td></tr>
                 </tbody>
               </table>
               <p className="font-bold mb-16">PEJABAT PEMBUAT KOMITMEN</p>
@@ -429,7 +484,7 @@ export default function Sppd() {
                 <td className="border border-black p-2 px-3 align-top w-1/2">
                   <table className="w-full">
                     <tbody>
-                      <tr><td className="w-24 pb-0.5">I. Tiba di</td><td>: .......................................</td></tr>
+                      <tr><td className="w-24 pb-0.5 font-bold">I. Tiba di</td><td>: .......................................</td></tr>
                       <tr><td className="pb-0.5">Pada Tanggal</td><td>: .......................................</td></tr>
                       <tr><td className="pb-6">Kepala</td><td>: </td></tr>
                       <tr><td colSpan="2" className="text-center pt-4">(...................................................)</td></tr>
@@ -440,58 +495,66 @@ export default function Sppd() {
                   <table className="w-full">
                     <tbody>
                       <tr><td className="w-24 pb-0.5">Berangkat dari</td><td>: Puskesmas Silian Raya</td></tr>
-                      <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(tanggalBerangkat)}</td></tr>
-                      <tr><td className="pb-6">Kepala</td><td>: Puskesmas Silian Raya</td></tr>
+                      <tr><td className="pb-0.5">Ke</td><td>: {formatDesa(perjalananList[0]?.desaTujuan)}</td></tr>
+                      <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(perjalananList[0]?.tanggal)}</td></tr>
+                      <tr><td className="pb-4">Kepala</td><td>: Puskesmas Silian Raya</td></tr>
                       <tr><td colSpan="2" className="text-center pt-4"><span className="font-bold underline">dr. Winda Marshella Tanuli</span><br/><span className="font-bold">NIP. 198312052011022001</span></td></tr>
-                    </tbody>
-                  </table>
-                </td>
-              </tr>
-              
-              <tr>
-                <td className="border border-black p-2 px-3 align-top">
-                  <table className="w-full">
-                    <tbody>
-                      <tr><td className="w-24 pb-0.5">II. Tiba di</td><td>: {formatDesa(desaTujuan)}</td></tr>
-                      <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(tanggalBerangkat)}</td></tr>
-                      <tr><td className="pb-6">Kepala</td><td>: {formatDesa(desaTujuan)}</td></tr>
-                      <tr><td colSpan="2" className="text-center pt-4">{getKepalaDesa(desaTujuan)}</td></tr>
-                    </tbody>
-                  </table>
-                </td>
-                <td className="border border-black p-2 px-3 align-top">
-                  <table className="w-full">
-                    <tbody>
-                      <tr><td className="w-24 pb-0.5">Berangkat dari</td><td>: {formatDesa(desaTujuan)}</td></tr>
-                      <tr><td className="pb-0.5">Ke</td><td>: Puskesmas Silian Raya</td></tr>
-                      <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(tanggalBerangkat)}</td></tr>
-                      <tr><td className="pb-4">Kepala</td><td>: {formatDesa(desaTujuan)}</td></tr>
-                      <tr><td colSpan="2" className="text-center pt-4">{getKepalaDesa(desaTujuan)}</td></tr>
                     </tbody>
                   </table>
                 </td>
               </tr>
 
+              {perjalananList.map((p, idx) => {
+                const isLast = idx === perjalananList.length - 1;
+                const nextP = perjalananList[idx + 1];
+                const romawi = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
+                return (
+                  <tr key={p.id}>
+                    <td className="border border-black p-2 px-3 align-top w-1/2">
+                      <table className="w-full">
+                        <tbody>
+                          <tr><td className="w-24 pb-0.5 font-bold">{romawi[idx + 2]}. Tiba di</td><td>: {formatDesa(p.desaTujuan)}</td></tr>
+                          <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(p.tanggal)}</td></tr>
+                          <tr><td className="pb-6">Kepala</td><td>: {formatDesa(p.desaTujuan)}</td></tr>
+                          <tr><td colSpan="2" className="text-center pt-4">{getKepalaDesa(p.desaTujuan)}</td></tr>
+                        </tbody>
+                      </table>
+                    </td>
+                    <td className="border border-black p-2 px-3 align-top w-1/2">
+                      <table className="w-full">
+                        <tbody>
+                          <tr><td className="w-24 pb-0.5">Berangkat dari</td><td>: {formatDesa(p.desaTujuan)}</td></tr>
+                          <tr><td className="pb-0.5">Ke</td><td>: {isLast ? 'Puskesmas Silian Raya' : formatDesa(nextP?.desaTujuan)}</td></tr>
+                          <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(isLast ? p.tanggal : nextP?.tanggal)}</td></tr>
+                          <tr><td className="pb-4">Kepala</td><td>: {formatDesa(p.desaTujuan)}</td></tr>
+                          <tr><td colSpan="2" className="text-center pt-4">{getKepalaDesa(p.desaTujuan)}</td></tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                );
+              })}
+
               <tr>
-                <td className="border border-black p-2 px-3 align-top">
+                <td className="border border-black p-2 px-3 align-top w-1/2">
                   <table className="w-full">
                     <tbody>
-                      <tr><td className="w-24 pb-0.5">III. Tiba di</td><td>: Puskesmas Silian Raya</td></tr>
-                      <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(tanggalBerangkat)}</td></tr>
+                      <tr><td className="w-24 pb-0.5 font-bold">{['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][perjalananList.length + 2]}. Tiba di</td><td>: Puskesmas Silian Raya</td></tr>
+                      <tr><td className="pb-0.5">Pada Tanggal</td><td>: {formatTanggalSurat(perjalananList[perjalananList.length - 1]?.tanggal)}</td></tr>
                       <tr><td className="pb-6">Kepala</td><td>: Puskesmas Silian Raya</td></tr>
                       <tr><td colSpan="2" className="text-center pt-4"><span className="font-bold underline">dr. Winda Marshella Tanuli</span><br/><span className="font-bold">NIP. 198312052011022001</span></td></tr>
                     </tbody>
                   </table>
                 </td>
-                <td className="border border-black p-2 px-3 align-top bg-slate-50/50">
+                <td className="border border-black p-2 px-3 align-top w-1/2 bg-slate-50/50">
                 </td>
               </tr>
             </tbody>
           </table>
 
           <div className="mt-2 mb-1 flex-shrink-0">
-            <h4 className="font-bold mb-1 text-[11px]">IV. Catatan Lain-lain :</h4>
-            <h4 className="font-bold mb-0.5 text-[11px]">V. PERHATIAN</h4>
+            <h4 className="font-bold mb-1 text-[11px]">{['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][perjalananList.length + 2]}. Catatan Lain-lain :</h4>
+            <h4 className="font-bold mb-0.5 text-[11px]">{['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'][perjalananList.length + 3]}. PERHATIAN</h4>
             <p className="text-[10px] text-justify leading-snug">
               PPK yang menerbitkan SPD, pegawai yang melakukan perjalanan dinas, para pejabat yang mengesahkan tanggal berangkat/tiba, serta bendahara pengeluaran bertanggung jawab berdasarkan peraturan-peraturan keuangan negara apabila menderita rugi akibat kesalahan, kelalaian dan kealpaannya.
             </p>

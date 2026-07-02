@@ -525,14 +525,19 @@ export default function HasilPemeriksaan({ activeRole, activeUser }) {
                   {/* Tab Navigation & Table */}
                   <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]">
                      <div className="flex gap-4 sm:gap-6 px-4 sm:px-6 border-b border-slate-100 pt-2 shrink-0 overflow-x-auto whitespace-nowrap scrollbar-none">
-                       {['Daftar Kelengkapan', `Daftar Kegiatan (${peg.totalKegiatan})`, 'Catatan Verifikasi', 'Riwayat Perubahan'].map(tab => (
+                       {[
+                          { key: 'Daftar Kelengkapan', label: 'Daftar Kelengkapan' },
+                          { key: 'Daftar Kegiatan', label: `Daftar Kegiatan (${peg.totalKegiatan})` },
+                          { key: 'Catatan Verifikasi', label: spjRevisi > 0 ? `Catatan Verifikasi (${spjRevisi})` : 'Catatan Verifikasi' },
+                          { key: 'Riwayat Perubahan', label: 'Riwayat Perubahan' }
+                       ].map(tab => (
                           <button 
-                             key={tab}
-                             onClick={() => setActiveTab(tab)}
-                             className={`pb-4 pt-4 text-sm font-bold transition-all relative ${activeTab === tab ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
+                             key={tab.key}
+                             onClick={() => setActiveTab(tab.key)}
+                             className={`pb-4 pt-4 text-sm font-bold transition-all relative ${activeTab === tab.key ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
                           >
-                             {tab}
-                             {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full"></div>}
+                             {tab.label}
+                             {activeTab === tab.key && <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full"></div>}
                           </button>
                        ))}
                     </div>
