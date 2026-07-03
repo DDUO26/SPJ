@@ -97,17 +97,23 @@ export default function CetakRiil({ printData, pegawaiCetak, bendahara, kpa, ppt
       
       <div className="w-full box-border relative pt-2">
         
-        {/* KOP SURAT RIIL: ARIAL, LOGO DIKUNCI 2.5cm */}
-        <div className="flex items-center justify-between border-b-[3px] border-black pb-1 mb-1" style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
-          <img src={logoMitra} alt="Mitra" className="logo-kop-riil" style={{ width: '1.8cm', height: '1.8cm', minWidth: '1.8cm', minHeight: '1.8cm', maxWidth: '1.8cm', maxHeight: '1.8cm', objectFit: 'contain', flexShrink: 0 }} />
-          
-          <div className="text-center flex-1">
-            <div style={{ fontSize: '14pt', fontWeight: 'bold' }}>PEMERINTAH KABUPATEN MINAHASA TENGGARA</div>
-            <div style={{ fontSize: '14pt', fontWeight: 'bold' }}>DINAS KESEHATAN</div>
-            <div style={{ fontSize: '11pt', fontWeight: 'normal' }}>UPTD PUSKESMAS SILIAN</div>
+        {/* KOP SURAT RIIL: TIMES NEW ROMAN */}
+        <div className="flex items-center justify-between border-b-[3px] border-black pb-1 mb-1" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+          <div className="w-[2.25cm] shrink-0 flex justify-center">
+            <img src={logoMitra} alt="Mitra" className="logo-kop-riil" style={{ width: '2.25cm', height: '2.25cm', minWidth: '2.25cm', minHeight: '2.25cm', maxWidth: '2.25cm', maxHeight: '2.25cm', objectFit: 'contain', flexShrink: 0 }} />
           </div>
           
-          <img src={logoPkm} alt="PKM" className="logo-kop-riil" style={{ width: '1.8cm', height: '1.8cm', minWidth: '1.8cm', minHeight: '1.8cm', maxWidth: '1.8cm', maxHeight: '1.8cm', objectFit: 'contain', flexShrink: 0 }} />
+          <div className="text-center flex-1 leading-tight">
+            <div style={{ fontSize: '14pt', fontWeight: 'bold' }}>PEMERINTAH KABUPATEN MINAHASA TENGGARA</div>
+            <div style={{ fontSize: '20pt', fontWeight: 'bold', marginTop: '1px' }}>DINAS KESEHATAN</div>
+            <div style={{ fontSize: '20pt', fontWeight: 'bold', marginTop: '1px' }}>UPTD PUSKESMAS SILIAN</div>
+            <div style={{ fontSize: '10pt', fontWeight: 'bold', marginTop: '4px' }}>Jl. Puskesmas, Desa Silian Satu Kecamatan. Silian Raya</div>
+            <div style={{ fontSize: '10pt', fontWeight: 'normal', marginTop: '1px' }}>Telp : 081524737716 &nbsp;&nbsp;Email : uptdpuskesmassilian@gmail.com &nbsp;&nbsp;Kode Pos : 95696</div>
+          </div>
+          
+          <div className="w-[2.25cm] shrink-0 flex justify-center">
+            <img src={logoPkm} alt="PKM" className="logo-kop-riil" style={{ width: '2.25cm', height: '2.25cm', minWidth: '2.25cm', minHeight: '2.25cm', maxWidth: '2.25cm', maxHeight: '2.25cm', objectFit: 'contain', flexShrink: 0 }} />
+          </div>
         </div>
 
         {/* JUDUL SURAT: 16pt, Tidak Bold, Times New Roman */}

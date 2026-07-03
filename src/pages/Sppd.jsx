@@ -327,14 +327,19 @@ export default function Sppd() {
         {/* HALAMAN 1 */}
         <div className="p-8 pb-12 w-full h-[297mm] box-border relative">
           
-          <div className="flex items-center border-b-[3px] border-black pb-3 mb-4">
-            <div className="w-[2cm] shrink-0 flex justify-center">
-              <img src={logoMitra} alt="Logo Mitra" className="h-[2cm] w-[2cm] object-contain grayscale print:grayscale-0" />
+          <div className="flex items-center border-b-[3px] border-black pb-2 mb-3">
+            <div className="w-[2.25cm] shrink-0 flex justify-center">
+              <img src={logoMitra} alt="Logo Mitra" className="h-[2.25cm] w-[2.25cm] object-contain grayscale print:grayscale-0" />
             </div>
-            <div className="flex-1 text-center pr-[2cm]">
-              <h2 className="text-[16px] font-bold uppercase tracking-wide leading-tight">Pemerintah Kabupaten Minahasa Tenggara</h2>
-              <h1 className="text-[20px] font-extrabold uppercase tracking-widest leading-tight">Puskesmas Silian Raya</h1>
-              <p className="text-[11px] mt-1">Alamat: Desa Silian Satu, Kabupaten Minahasa Tenggara, Kode Pos: 95998</p>
+            <div className="flex-1 text-center font-serif">
+              <h2 className="font-bold uppercase tracking-wide leading-tight" style={{ fontSize: '14pt' }}>PEMERINTAH KABUPATEN MINAHASA TENGGARA</h2>
+              <h2 className="font-bold uppercase tracking-wide leading-tight mt-0.5" style={{ fontSize: '20pt' }}>DINAS KESEHATAN</h2>
+              <h1 className="font-bold uppercase tracking-wide leading-tight mt-0.5" style={{ fontSize: '20pt' }}>UPTD PUSKESMAS SILIAN</h1>
+              <p className="font-bold mt-1" style={{ fontSize: '10pt' }}>Jl. Puskesmas, Desa Silian Satu Kecamatan. Silian Raya</p>
+              <p className="font-normal" style={{ fontSize: '10pt' }}>Telp : 081524737716 &nbsp;&nbsp;Email : uptdpuskesmassilian@gmail.com &nbsp;&nbsp;Kode Pos : 95696</p>
+            </div>
+            <div className="w-[2.25cm] shrink-0 flex justify-center">
+              <img src={logoPkm} alt="Logo PKM" className="h-[2.25cm] w-[2.25cm] object-contain grayscale print:grayscale-0" />
             </div>
           </div>
 
@@ -356,26 +361,26 @@ export default function Sppd() {
               <tr>
                 <td className="border border-black p-2 text-center w-8">1</td>
                 <td className="border border-black p-2 w-[35%]">Pejabat Pembuat Komitmen</td>
-                <td className="border border-black p-2 font-bold uppercase">Kepala Puskesmas Silian Raya<br/>Kabupaten Minahasa Tenggara</td>
+                <td className="border border-black p-2 uppercase">Kepala Puskesmas Silian Raya<br/>Kabupaten Minahasa Tenggara</td>
               </tr>
               <tr>
                 <td className="border border-black p-2 text-center">2</td>
                 <td className="border border-black p-2">Nama/NIP Pegawai yang melaksanakan perjalanan dinas</td>
-                <td className="border border-black p-2 font-bold">
-                  {pegawaiTerpilih ? pegawaiTerpilih.nama.toUpperCase() : '..................................................'}<br/>
-                  {formatNip(pegawaiTerpilih?.nip)}
+                <td className="border border-black p-2">
+                  {pegawaiTerpilih ? (pegawaiTerpilih.nama.includes(',') ? pegawaiTerpilih.nama.split(',')[0].toUpperCase() + ',' + pegawaiTerpilih.nama.substring(pegawaiTerpilih.nama.indexOf(',') + 1) : pegawaiTerpilih.nama.toUpperCase()) : '..................................................'}<br/>
+                  {pegawaiTerpilih?.nip || ''}
                 </td>
               </tr>
               <tr>
                 <td className="border border-black p-2 text-center align-top">3</td>
                 <td className="border border-black p-2 align-top">
-                  a. Pangkat/Golongan<br/><br/>
+                  a. Pangkat/Golongan<br/>
                   b. Jabatan / Instansi<br/>
                   c. Tingkat Biaya Perjalanan Dinas
                 </td>
                 <td className="border border-black p-2 align-top">
-                  a. {pegawaiTerpilih ? pegawaiTerpilih.golongan : '......................................'}<br/><br/>
-                  b. {pegawaiTerpilih ? pegawaiTerpilih.jabatanFungsional : '......................................'}<br/>
+                  a. {pegawaiTerpilih ? pegawaiTerpilih.golongan?.toUpperCase() : '......................................'}<br/>
+                  b. {pegawaiTerpilih ? pegawaiTerpilih.jabatanFungsional?.toUpperCase() : '......................................'}<br/>
                   c.
                 </td>
               </tr>
@@ -392,11 +397,11 @@ export default function Sppd() {
               <tr>
                 <td className="border border-black p-2 text-center align-top">6</td>
                 <td className="border border-black p-2 align-top">
-                  a. Tempat Berangkat<br/><br/>
+                  a. Tempat Berangkat<br/>
                   b. Tempat Tujuan
                 </td>
                 <td className="border border-black p-2 align-top">
-                  a. Puskesmas Silian Raya<br/><br/>
+                  a. Puskesmas Silian Raya<br/>
                   b. {perjalananList.map(p => formatDesa(p.desaTujuan)).filter(Boolean).join(', ')}
                 </td>
               </tr>
@@ -425,12 +430,12 @@ export default function Sppd() {
               <tr>
                 <td className="border border-black p-2 text-center align-top">9</td>
                 <td className="border border-black p-2 align-top">
-                  Pembebanan Anggaran<br/><br/>
+                  Pembebanan Anggaran<br/>
                   a. Instansi<br/>
                   b. Akun
                 </td>
                 <td className="border border-black p-2 align-top">
-                  DAK Non Fisik-Dana BOK-BOK Puskesmas<br/><br/>
+                  DAK Non Fisik-Dana BOK-BOK Puskesmas<br/>
                   a. PUSKESMAS SILIAN RAYA<br/>
                   b. 
                 </td>
@@ -464,17 +469,19 @@ export default function Sppd() {
         <div className="p-6 pt-4 w-full h-[297mm] box-border relative print:break-before-page flex flex-col">
           
           {/* Header Halaman 2 dengan Logo */}
-          <div className="flex items-center border-b-[3px] border-black pb-2 mb-3">
-            <div className="w-[2cm] shrink-0 flex justify-center">
-              <img src={logoMitra} alt="Logo Mitra" className="h-[2cm] w-[2cm] object-contain grayscale print:grayscale-0" />
+          <div className="flex items-center border-b-[3px] border-black pb-2 mb-2">
+            <div className="w-[2.25cm] shrink-0 flex justify-center">
+              <img src={logoMitra} alt="Logo Mitra" className="h-[2.25cm] w-[2.25cm] object-contain grayscale print:grayscale-0" />
             </div>
-            <div className="flex-1 text-center">
-              <h2 className="text-[14px] font-bold uppercase tracking-wide leading-tight">Pemerintah Kabupaten Minahasa Tenggara</h2>
-              <h1 className="text-[18px] font-extrabold uppercase tracking-widest leading-tight">Puskesmas Silian Raya</h1>
-              <p className="text-[10px] mt-0.5">Alamat: Desa Silian Satu, Kabupaten Minahasa Tenggara, Kode Pos: 95998</p>
+            <div className="flex-1 text-center font-serif">
+              <h2 className="font-bold uppercase tracking-wide leading-tight" style={{ fontSize: '14pt' }}>PEMERINTAH KABUPATEN MINAHASA TENGGARA</h2>
+              <h2 className="font-bold uppercase tracking-wide leading-tight mt-0.5" style={{ fontSize: '20pt' }}>DINAS KESEHATAN</h2>
+              <h1 className="font-bold uppercase tracking-wide leading-tight mt-0.5" style={{ fontSize: '20pt' }}>UPTD PUSKESMAS SILIAN</h1>
+              <p className="font-bold mt-1" style={{ fontSize: '10pt' }}>Jl. Puskesmas, Desa Silian Satu Kecamatan. Silian Raya</p>
+              <p className="font-normal" style={{ fontSize: '10pt' }}>Telp : 081524737716 &nbsp;&nbsp;Email : uptdpuskesmassilian@gmail.com &nbsp;&nbsp;Kode Pos : 95696</p>
             </div>
-            <div className="w-[2cm] shrink-0 flex justify-center">
-              <img src={logoPkm} alt="Logo PKM" className="h-[2cm] w-[2cm] object-contain grayscale print:grayscale-0" />
+            <div className="w-[2.25cm] shrink-0 flex justify-center">
+              <img src={logoPkm} alt="Logo PKM" className="h-[2.25cm] w-[2.25cm] object-contain grayscale print:grayscale-0" />
             </div>
           </div>
 

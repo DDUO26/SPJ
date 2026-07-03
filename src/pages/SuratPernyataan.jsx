@@ -1,4 +1,6 @@
 import React from 'react';
+import logoMitra from '../assets/logo mitra.png';
+import logoPkm from '../assets/logopkm.png';
 
 export default function SuratPernyataan({ printData, pegawaiCetak, nomorSppd }) {
   if (!printData) return null;
@@ -47,18 +49,35 @@ export default function SuratPernyataan({ printData, pegawaiCetak, nomorSppd }) 
   return (
     <div 
       className="hidden print:block bg-white w-full mx-auto text-black relative z-[9999]"
-      style={{ fontFamily: '"Times New Roman", Times, serif', fontSize: '11pt', lineHeight: '1.5' }}
+      style={{ fontFamily: '"Times New Roman", Times, serif', fontSize: '11pt', lineHeight: '1' }}
     >
       <style>{`
         @media print {
           body, html, #root, .overflow-hidden, .h-screen { height: auto !important; overflow: visible !important; background-color: white !important; }
-          @page { size: A4; margin: 20mm 20mm; }
+          @page { size: A4; margin: 10mm 15mm; }
           table { border-collapse: collapse; }
           .indent-list { padding-left: 20px; }
         }
       `}</style>
       
-      <div className="w-full box-border relative pt-4 px-4">
+      <div className="w-full box-border relative pt-4">
+        
+        {/* KOP SURAT */}
+        <div className="flex items-center justify-between border-b-[3px] border-black pb-2 mb-3" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+          <div className="w-[2.25cm] shrink-0 flex justify-center">
+            <img src={logoMitra} alt="Mitra" className="h-[2.25cm] w-[2.25cm] object-contain flex-shrink-0" />
+          </div>
+          <div className="text-center flex-1 leading-tight">
+            <div style={{ fontSize: '14pt', fontWeight: 'bold' }}>PEMERINTAH KABUPATEN MINAHASA TENGGARA</div>
+            <div style={{ fontSize: '20pt', fontWeight: 'bold', marginTop: '1px' }}>DINAS KESEHATAN</div>
+            <div style={{ fontSize: '20pt', fontWeight: 'bold', marginTop: '1px' }}>UPTD PUSKESMAS SILIAN</div>
+            <div style={{ fontSize: '10pt', fontWeight: 'bold', marginTop: '4px' }}>Jl. Puskesmas, Desa Silian Satu Kecamatan. Silian Raya</div>
+            <div style={{ fontSize: '10pt', fontWeight: 'normal', marginTop: '1px' }}>Telp : 081524737716 &nbsp;&nbsp;Email : uptdpuskesmassilian@gmail.com &nbsp;&nbsp;Kode Pos : 95696</div>
+          </div>
+          <div className="w-[2.25cm] shrink-0 flex justify-center">
+            <img src={logoPkm} alt="PKM" className="h-[2.25cm] w-[2.25cm] object-contain flex-shrink-0" />
+          </div>
+        </div>
         
         {/* JUDUL */}
         <div className="text-center mb-6">

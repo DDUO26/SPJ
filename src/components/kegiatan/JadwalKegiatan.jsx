@@ -19,6 +19,7 @@ import logoPkm from '../../assets/logopkm.png';
 // Import Cetak components
 import CetakRiil from '../../pages/CetakRiil';
 import SuratPernyataan from '../../pages/SuratPernyataan';
+import SuratTugas from '../../pages/SuratTugas';
 
 export default function JadwalKegiatan({ activeRole = 'Admin' }) {
   const [daftarKegiatan, setDaftarKegiatan] = useState([]);
@@ -530,6 +531,9 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                   <button onClick={() => setJenisDokumen('PERNYATAAN')} className={`py-3 rounded-xl border-2 font-bold text-sm transition-all flex justify-center items-center ${jenisDokumen === 'PERNYATAAN' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
                     <FileText size={18} className="mr-2 mb-0.5"/> Pernyataan
                   </button>
+                  <button onClick={() => setJenisDokumen('TUGAS')} className={`py-3 rounded-xl border-2 font-bold text-sm transition-all flex justify-center items-center ${jenisDokumen === 'TUGAS' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                    <FileText size={18} className="mr-2 mb-0.5"/> Surat Tugas
+                  </button>
                 </div>
               </div>
 
@@ -600,7 +604,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
             </div>
 
             <div className="mt-8">
-              <button onClick={eksekusiCetak} disabled={!printPetugas} className={`w-full text-white py-3.5 rounded-xl font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${jenisDokumen === 'RIIL' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30' : jenisDokumen === 'PERNYATAAN' ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}>
+              <button onClick={eksekusiCetak} disabled={!printPetugas} className={`w-full text-white py-3.5 rounded-xl font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${jenisDokumen === 'RIIL' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30' : jenisDokumen === 'PERNYATAAN' ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30' : jenisDokumen === 'TUGAS' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/30' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}>
                 <Printer size={20}/> Cetak Dokumen {jenisDokumen}
               </button>
             </div>
@@ -628,12 +632,19 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
 
           {/* HALAMAN 1 SPPD */}
           <div className="w-full box-border relative">
-            <div className="flex items-center border-b-[3px] border-black pb-2 mb-3" style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontWeight: 'bold' }}>
-              <div className="w-24 shrink-0 flex justify-center"><img src={logoMitra} alt="Logo" className="h-[75px] w-auto object-contain" /></div>
-              <div className="flex-1 text-center pr-10">
-                <div style={{ fontSize: '14pt' }} className="leading-tight">PEMERINTAH KABUPATEN MINAHASA TENGGARA<br/>PUSKESMAS SILIAN RAYA</div>
-                <div style={{ fontSize: '8pt' }} className="mt-1">Alamat : Desa Silian Satu</div>
-                <div style={{ fontSize: '11pt' }} className="mt-1 tracking-[0.2em]">KABUPATEN MINAHASA TENGGARA</div>
+            <div className="flex items-center justify-between border-b-[3px] border-black pb-2 mb-3" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+              <div className="w-[2.25cm] shrink-0 flex justify-center">
+                <img src={logoMitra} alt="Mitra" className="h-[2.25cm] w-[2.25cm] object-contain flex-shrink-0" />
+              </div>
+              <div className="text-center flex-1 leading-tight">
+                <div style={{ fontSize: '14pt', fontWeight: 'bold' }}>PEMERINTAH KABUPATEN MINAHASA TENGGARA</div>
+                <div style={{ fontSize: '20pt', fontWeight: 'bold', marginTop: '1px' }}>DINAS KESEHATAN</div>
+                <div style={{ fontSize: '20pt', fontWeight: 'bold', marginTop: '1px' }}>UPTD PUSKESMAS SILIAN</div>
+                <div style={{ fontSize: '10pt', fontWeight: 'bold', marginTop: '4px' }}>Jl. Puskesmas, Desa Silian Satu Kecamatan. Silian Raya</div>
+                <div style={{ fontSize: '10pt', fontWeight: 'normal', marginTop: '1px' }}>Telp : 081524737716 &nbsp;&nbsp;Email : uptdpuskesmassilian@gmail.com &nbsp;&nbsp;Kode Pos : 95696</div>
+              </div>
+              <div className="w-[2.25cm] shrink-0 flex justify-center">
+                <img src={logoPkm} alt="PKM" className="h-[2.25cm] w-[2.25cm] object-contain flex-shrink-0" />
               </div>
             </div>
 
@@ -655,24 +666,24 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                 <tr>
                   <td className="border border-black text-center align-top w-[5%]">1</td>
                   <td className="border border-black align-top w-[35%]">Pejabat Pembuat Komitmen</td>
-                  <td colSpan="2" className="border border-black align-top font-bold uppercase w-[60%]">KEPALA PUSKESMAS SILIAN RAYA<br/>KABUPATEN MINAHASA TENGGARA</td>
+                  <td colSpan="2" className="border border-black align-top uppercase w-[60%]">Kepala Puskesmas Silian Raya<br/>Kabupaten Minahasa Tenggara</td>
                 </tr>
                 <tr>
                   <td className="border border-black text-center align-top">2</td>
                   <td className="border border-black align-top">Nama/NIP Pegawai yang melaksanakan perjalanan dinas</td>
-                  <td colSpan="2" className="border border-black align-top font-bold">{pegawaiCetak ? pegawaiCetak.nama.toUpperCase() : '.......................................'}<br/>{formatNip(pegawaiCetak?.nip)}</td>
+                  <td colSpan="2" className="border border-black align-top">{pegawaiCetak ? (pegawaiCetak.nama.includes(',') ? pegawaiCetak.nama.split(',')[0].toUpperCase() + ',' + pegawaiCetak.nama.substring(pegawaiCetak.nama.indexOf(',') + 1) : pegawaiCetak.nama.toUpperCase()) : '.......................................'}<br/>{pegawaiCetak?.nip || ''}</td>
                 </tr>
                 <tr>
                   <td className="border border-black text-center align-top">3</td>
-                  <td className="border border-black align-top">a. Pangkat/Golongan<br/><br/>b. Jabatan / Instansi<br/>c. Tingkat Biaya Perjalanan Dinas</td>
-                  <td colSpan="2" className="border border-black align-top">a. {pegawaiCetak?.golongan || '......................................'}<br/><br/><span className="font-bold">b. {pegawaiCetak?.jabatanFungsional || '......................................'}</span><br/>c.</td>
+                  <td className="border border-black align-top">a. Pangkat/Golongan<br/>b. Jabatan / Instansi<br/>c. Tingkat Biaya Perjalanan Dinas</td>
+                  <td colSpan="2" className="border border-black align-top">a. {pegawaiCetak?.golongan?.toUpperCase() || '......................................'}<br/>b. {pegawaiCetak?.jabatanFungsional?.toUpperCase() || '......................................'}<br/>c.</td>
                 </tr>
                 <tr><td className="border border-black text-center align-top">4</td><td className="border border-black align-top">Maksud Perjalanan Dinas</td><td colSpan="2" className="border border-black align-top">{printData.kegiatan}</td></tr>
                 <tr><td className="border border-black text-center align-top">5</td><td className="border border-black align-top">Alat Angkut yang di Pergunakan</td><td colSpan="2" className="border border-black align-top">Mobil</td></tr>
                 <tr>
                   <td className="border border-black text-center align-top">6</td>
-                  <td className="border border-black align-top">a. Tempat Berangkat<br/><br/>b. Tempat Tujuan</td>
-                  <td colSpan="2" className="border border-black align-top">a. Puskesmas Silian Raya<br/><br/>b. {perjalananList.map(p => formatDesa(p.desa)).join(', ')}</td>
+                  <td className="border border-black align-top">a. Tempat Berangkat<br/>b. Tempat Tujuan</td>
+                  <td colSpan="2" className="border border-black align-top">a. Puskesmas Silian Raya<br/>b. {perjalananList.map(p => formatDesa(p.desa)).join(', ')}</td>
                 </tr>
                 <tr>
                   <td className="border border-black text-center align-top">7</td>
@@ -689,8 +700,8 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                 <tr><td className="border border-black align-top">2. </td><td className="border border-black align-top"></td><td className="border border-black align-top"></td></tr>
                 <tr>
                   <td className="border border-black text-center align-top">9</td>
-                  <td className="border border-black align-top">Pembebanan Anggaran<br/><br/>a. Instansi<br/>b. Akun</td>
-                  <td colSpan="2" className="border border-black align-top">DAK Non Fisik-Dana BOK-BOK Puskesmas<br/><br/>a. PUSKESMAS SILIAN RAYA<br/>b. </td>
+                  <td className="border border-black align-top">Pembebanan Anggaran<br/>a. Instansi<br/>b. Akun</td>
+                  <td colSpan="2" className="border border-black align-top">DAK Non Fisik-Dana BOK-BOK Puskesmas<br/>a. PUSKESMAS SILIAN RAYA<br/>b. </td>
                 </tr>
                 <tr><td className="border border-black text-center align-top">10</td><td className="border border-black align-top">Keterangan Lain-lain</td><td colSpan="2" className="border border-black align-top"></td></tr>
               </tbody>
@@ -702,7 +713,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                   <tbody><tr><td className="pr-2">Dikeluarkan di</td><td>: Silian</td></tr><tr><td className="pr-2">Pada Tanggal</td><td>: {formatTgl(printData.tanggal, printData.bulan)}</td></tr></tbody>
                 </table>
                 <p className="font-bold mb-12">PEJABAT PEMBUAT KOMITMEN</p>
-                <p className="font-bold underline">dr. Winda Marshella Tanuli</p><p>Pembina Tkt I/ IV b</p><p className="font-bold">NIP. 198312052011022001</p>
+                <p className="font-bold underline">dr. Winda Marshella Tanuli</p><p className="font-bold">Pembina Tkt I/ IV b</p><p className="font-bold">NIP. 198312052011022001</p>
               </div>
             </div>
           </div>
@@ -837,6 +848,17 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
       {/* ====================================================================== */}
       {printData && jenisDokumen === 'PERNYATAAN' && (
         <SuratPernyataan 
+          printData={printData}
+          pegawaiCetak={pegawaiCetak}
+          nomorSppd={nomorSppd}
+        />
+      )}
+
+      {/* ====================================================================== */}
+      {/* AREA KERTAS A4: SURAT TUGAS */}
+      {/* ====================================================================== */}
+      {printData && jenisDokumen === 'TUGAS' && (
+        <SuratTugas 
           printData={printData}
           pegawaiCetak={pegawaiCetak}
           nomorSppd={nomorSppd}
