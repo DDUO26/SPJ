@@ -1,7 +1,7 @@
 import React from 'react';
 import garudaLogo from '../assets/garuda_emas.png';
 
-export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
+export default function SuratTugas({ printData, pegawaiCetak, semuaPegawaiCetak, extraActivities, nomorSppd }) {
   if (!printData) return null;
 
   // Fungsi format NIP / NI PPPK
@@ -41,9 +41,32 @@ export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
   const romawi = getBulanRomawi(printData.bulan);
   const tahun = getTahun(printData.bulan);
   
-  // Ambil data desa tujuan untuk ditampilkan di "Untuk: poin 2"
-  const tujuanText = printData.desa || printData.tujuan || '...........................................';
+  // Data kombinasi jika ada kegiatan tambahan (multi-hari)
+  const gabungkanTanggal = () => {
+    let semuaKegiatan = [printData, ...(extraActivities || [])].sort((a,b) => {
+      const dateA = new Date(a.tanggal ? `${getTahun(a.bulan)}-${String(a.bulan).split(' ')[0]}-${a.tanggal}` : 0);
+      const dateB = new Date(b.tanggal ? `${getTahun(b.bulan)}-${String(b.bulan).split(' ')[0]}-${b.tanggal}` : 0);
+      return dateA - dateB;
+    });
+    
+    const tglArray = semuaKegiatan.map(k => String(k.tanggal).padStart(2, '0'));
+    const formatBulan = printData.bulan.split(' ')[0].charAt(0).toUpperCase() + printData.bulan.split(' ')[0].slice(1).toLowerCase();
+    
+    return `${tglArray.join(', ')} ${formatBulan} ${tahun}`;
+  };
+
+  const gabungkanDesa = () => {
+    let semuaKegiatan = [printData, ...(extraActivities || [])];
+    const uniqueDesa = [...new Set(semuaKegiatan.map(k => k.desa || k.tujuan || '...........................................'))];
+    return uniqueDesa.join(', ');
+  };
+
   const kegiatanText = printData.maksudPerjalanan || printData.kegiatan || printData.namaKegiatan || '...........................................';
+  const tanggalText = gabungkanTanggal();
+  const tujuanText = gabungkanDesa();
+
+  // Daftar pegawai yang akan dicetak
+  const daftarPegawai = (semuaPegawaiCetak && semuaPegawaiCetak.length > 0) ? semuaPegawaiCetak : [pegawaiCetak];
 
   return (
     <div 
@@ -93,38 +116,42 @@ export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
 
         <table className="w-full mb-4">
           <tbody>
-            <tr>
-              <td className="w-28 align-top pb-1 pl-4">Kepada</td>
-              <td className="w-4 align-top pb-1 text-center">:</td>
-              <td className="w-6 align-top pb-1">1.</td>
-              <td className="w-24 align-top pb-1">Nama</td>
-              <td className="w-4 align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.nama || '...........................................'}</td>
-            </tr>
-            <tr>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1">NI PPPK</td>
-              <td className="align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.nip ? formatNip(pegawaiCetak.nip) : '...........................................'}</td>
-            </tr>
-            <tr>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1">Pangkat/Gol</td>
-              <td className="align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.golongan || '...........................................'}</td>
-            </tr>
-            <tr>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1">Jabatan</td>
-              <td className="align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.jabatanFungsional || '...........................................'}</td>
-            </tr>
+            {daftarPegawai.map((peg, index) => (
+              <React.Fragment key={index}>
+                <tr>
+                  <td className={`w-28 align-top pb-1 pl-4 ${index > 0 ? 'pt-2' : ''}`}>{index === 0 ? 'Kepada' : ''}</td>
+                  <td className={`w-4 align-top pb-1 text-center ${index > 0 ? 'pt-2' : ''}`}>{index === 0 ? ':' : ''}</td>
+                  <td className={`w-6 align-top pb-1 ${index > 0 ? 'pt-2' : ''}`}>{index + 1}.</td>
+                  <td className={`w-24 align-top pb-1 ${index > 0 ? 'pt-2' : ''}`}>Nama</td>
+                  <td className={`w-4 align-top pb-1 text-center ${index > 0 ? 'pt-2' : ''}`}>:</td>
+                  <td className={`pb-1 ${index > 0 ? 'pt-2' : ''}`}>{peg?.nama || '...........................................'}</td>
+                </tr>
+                <tr>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1">NI PPPK</td>
+                  <td className="align-top pb-1 text-center">:</td>
+                  <td className="pb-1">{peg?.nip ? formatNip(peg.nip) : '...........................................'}</td>
+                </tr>
+                <tr>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1">Pangkat/Gol</td>
+                  <td className="align-top pb-1 text-center">:</td>
+                  <td className="pb-1">{peg?.golongan || '...........................................'}</td>
+                </tr>
+                <tr>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1">Jabatan</td>
+                  <td className="align-top pb-1 text-center">:</td>
+                  <td className="pb-1">{peg?.jabatanFungsional || '...........................................'}</td>
+                </tr>
+              </React.Fragment>
+            ))}
           </tbody>
         </table>
 
@@ -133,7 +160,7 @@ export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
             <tr>
               <td className="w-28 align-top pb-1 pl-4">Tanggal</td>
               <td className="w-4 align-top pb-1 text-center">:</td>
-              <td colSpan="2" className="pb-1">{formatTgl(printData.tanggal, printData.bulan)}</td>
+              <td colSpan="2" className="pb-1">{tanggalText}</td>
             </tr>
             <tr>
               <td className="align-top pb-1 pl-4">Untuk</td>
@@ -204,38 +231,42 @@ export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
 
         <table className="w-full mb-4">
           <tbody>
-            <tr>
-              <td className="w-28 align-top pb-1 pl-4">Kepada</td>
-              <td className="w-4 align-top pb-1 text-center">:</td>
-              <td className="w-6 align-top pb-1">1.</td>
-              <td className="w-24 align-top pb-1">Nama</td>
-              <td className="w-4 align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.nama || '...........................................'}</td>
-            </tr>
-            <tr>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1">NI PPPK</td>
-              <td className="align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.nip ? formatNip(pegawaiCetak.nip) : '...........................................'}</td>
-            </tr>
-            <tr>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1">Pangkat/Gol</td>
-              <td className="align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.golongan || '...........................................'}</td>
-            </tr>
-            <tr>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1"></td>
-              <td className="align-top pb-1">Jabatan</td>
-              <td className="align-top pb-1 text-center">:</td>
-              <td className="pb-1">{pegawaiCetak?.jabatanFungsional || '...........................................'}</td>
-            </tr>
+            {daftarPegawai.map((peg, index) => (
+              <React.Fragment key={index}>
+                <tr>
+                  <td className={`w-28 align-top pb-1 pl-4 ${index > 0 ? 'pt-2' : ''}`}>{index === 0 ? 'Kepada' : ''}</td>
+                  <td className={`w-4 align-top pb-1 text-center ${index > 0 ? 'pt-2' : ''}`}>{index === 0 ? ':' : ''}</td>
+                  <td className={`w-6 align-top pb-1 ${index > 0 ? 'pt-2' : ''}`}>{index + 1}.</td>
+                  <td className={`w-24 align-top pb-1 ${index > 0 ? 'pt-2' : ''}`}>Nama</td>
+                  <td className={`w-4 align-top pb-1 text-center ${index > 0 ? 'pt-2' : ''}`}>:</td>
+                  <td className={`pb-1 ${index > 0 ? 'pt-2' : ''}`}>{peg?.nama || '...........................................'}</td>
+                </tr>
+                <tr>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1">NI PPPK</td>
+                  <td className="align-top pb-1 text-center">:</td>
+                  <td className="pb-1">{peg?.nip ? formatNip(peg.nip) : '...........................................'}</td>
+                </tr>
+                <tr>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1">Pangkat/Gol</td>
+                  <td className="align-top pb-1 text-center">:</td>
+                  <td className="pb-1">{peg?.golongan || '...........................................'}</td>
+                </tr>
+                <tr>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1"></td>
+                  <td className="align-top pb-1">Jabatan</td>
+                  <td className="align-top pb-1 text-center">:</td>
+                  <td className="pb-1">{peg?.jabatanFungsional || '...........................................'}</td>
+                </tr>
+              </React.Fragment>
+            ))}
           </tbody>
         </table>
 
@@ -244,7 +275,7 @@ export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
             <tr>
               <td className="w-28 align-top pb-1 pl-4">Tanggal</td>
               <td className="w-4 align-top pb-1 text-center">:</td>
-              <td colSpan="2" className="pb-1">{formatTgl(printData.tanggal, printData.bulan)}</td>
+              <td colSpan="2" className="pb-1">{tanggalText}</td>
             </tr>
             <tr>
               <td className="align-top pb-1 pl-4">Untuk</td>

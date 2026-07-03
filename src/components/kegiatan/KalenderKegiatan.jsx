@@ -571,14 +571,19 @@ export default function KalenderKegiatan() {
     return getNamaResmiObject(printPetugas);
   }, [printPetugas, daftarPegawai]);
 
+  const semuaPegawaiCetak = useMemo(() => {
+    if (!printData || !printData.pegawai) return [];
+    return printData.pegawai.split(',').map(nama => getNamaResmiObject(nama.trim()));
+  }, [printData, daftarPegawai]);
+
   const relatedActivities = useMemo(() => {
-    if (!printData || !printPetugas || jenisDokumen !== 'SPPD') return [];
+    if (!printData || !printPetugas || (jenisDokumen !== 'SPPD' && jenisDokumen !== 'TUGAS')) return [];
     return daftarKegiatan.filter(k => 
       k.id !== printData.id &&
       k.bulan === printData.bulan &&
       k.program === printData.program &&
       k.kegiatan === printData.kegiatan &&
-      k.pegawai && k.pegawai.includes(printPetugas)
+      (jenisDokumen === 'TUGAS' ? true : (k.pegawai && k.pegawai.includes(printPetugas)))
     ).sort((a,b) => {
       const dateA = new Date(a.tanggal ? `${getTahun(a.bulan)}-${String(a.bulan).split(' ')[0]}-${a.tanggal}` : 0);
       const dateB = new Date(b.tanggal ? `${getTahun(b.bulan)}-${String(b.bulan).split(' ')[0]}-${b.tanggal}` : 0);
@@ -1481,7 +1486,11 @@ export default function KalenderKegiatan() {
 
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-2">2. Pilih Petugas yang Dicetak</label>
-                {printData.pegawai ? (
+                {jenisDokumen === 'TUGAS' ? (
+                  <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-sm font-medium text-purple-700">
+                    Sistem akan otomatis mencetak Surat Tugas untuk <strong>semua {daftarNamaPetugas.length} pegawai</strong> sekaligus di dalam 1 dokumen.
+                  </div>
+                ) : printData.pegawai ? (
                   <select value={printPetugas} onChange={(e) => setPrintPetugas(e.target.value)} className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 focus:bg-emerald-50/30">
                     {printData.pegawai.split(',').map((p, i) => (
                       <option key={i} value={p.trim()}>{p.trim()}</option>
@@ -1500,19 +1509,19 @@ export default function KalenderKegiatan() {
                 )}
               </div>
 
-              {jenisDokumen === 'SPPD' && relatedActivities.length > 0 && (
-                <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-xl mt-4">
-                  <label className="block text-sm font-bold text-emerald-800 mb-2">3. Tambahkan Tujuan Lain (Maks 2 Hari Tambahan)</label>
+              {(jenisDokumen === 'SPPD' || jenisDokumen === 'TUGAS') && relatedActivities.length > 0 && (
+                <div className={`${jenisDokumen === 'SPPD' ? 'bg-emerald-50/50 border-emerald-100' : 'bg-purple-50/50 border-purple-100'} border p-4 rounded-xl mt-4`}>
+                  <label className={`block text-sm font-bold ${jenisDokumen === 'SPPD' ? 'text-emerald-800' : 'text-purple-800'} mb-2`}>3. Tambahkan Tujuan Lain (Maks 2 Hari Tambahan)</label>
                   <p className="text-[10px] text-emerald-600 mb-3 leading-tight">Pilih kegiatan lain dengan maksud yang sama untuk digabungkan ke dalam 1 SPPD.</p>
                   <div className="space-y-2 max-h-[120px] overflow-y-auto pr-2 scrollbar-thin">
                     {relatedActivities.map(keg => {
                       const isChecked = selectedExtraActivities.some(a => a.id === keg.id);
                       const isDisabled = !isChecked && selectedExtraActivities.length >= 2;
                       return (
-                        <label key={keg.id} className={`flex items-start gap-3 p-3 rounded-xl border ${isChecked ? 'border-emerald-500 bg-emerald-100' : 'border-slate-200 bg-white'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-emerald-300'}`}>
+                        <label key={keg.id} className={`flex items-start gap-3 p-3 rounded-xl border ${isChecked ? (jenisDokumen === 'SPPD' ? 'border-emerald-500 bg-emerald-100' : 'border-purple-500 bg-purple-100') : 'border-slate-200 bg-white'} ${isDisabled ? 'opacity-50 cursor-not-allowed' : `cursor-pointer ${jenisDokumen === 'SPPD' ? 'hover:border-emerald-300' : 'hover:border-purple-300'}`}`}>
                           <input 
                             type="checkbox" 
-                            className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500"
+                            className={`mt-0.5 rounded focus:ring-2 ${jenisDokumen === 'SPPD' ? 'text-emerald-600 focus:ring-emerald-500' : 'text-purple-600 focus:ring-purple-500'}`}
                             checked={isChecked}
                             disabled={isDisabled}
                             onChange={() => {
@@ -1535,7 +1544,7 @@ export default function KalenderKegiatan() {
               )}
 
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl mt-4">
-                <label className="block text-sm font-bold text-slate-700 mb-2">{jenisDokumen === 'SPPD' && relatedActivities.length > 0 ? '4' : '3'}. Nomor Surat Lampiran</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">{(jenisDokumen === 'SPPD' || jenisDokumen === 'TUGAS') && relatedActivities.length > 0 ? '4' : '3'}. Nomor Surat Lampiran</label>
                 <div className="flex items-center gap-2">
                   <input type="text" value={nomorSppd} onChange={(e) => setNomorSppd(e.target.value)} placeholder="No" className="w-20 border-2 border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 outline-none text-center focus:border-indigo-500 bg-white" />
                   <span className="text-sm font-bold text-slate-600">/440/DINKES-MT/PKM-SLN/SPPD-DD/{printData ? `${getBulanRomawi(printData.bulan)}-${getTahun(printData.bulan)}` : 'VI-2026'}</span>
@@ -1545,7 +1554,7 @@ export default function KalenderKegiatan() {
             </div>
 
             <div className="mt-8">
-              <button type="button" onClick={eksekusiCetak} disabled={!printPetugas} className={`w-full text-white py-3.5 rounded-xl font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${jenisDokumen === 'RIIL' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30' : jenisDokumen === 'PERNYATAAN' ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30' : jenisDokumen === 'TUGAS' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/30' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}>
+              <button type="button" onClick={eksekusiCetak} disabled={jenisDokumen !== 'TUGAS' && !printPetugas} className={`w-full text-white py-3.5 rounded-xl font-bold text-base shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${jenisDokumen === 'RIIL' ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30' : jenisDokumen === 'PERNYATAAN' ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/30' : jenisDokumen === 'TUGAS' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/30' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30'}`}>
                 <Printer size={20}/> Cetak Dokumen {jenisDokumen}
               </button>
             </div>
@@ -1802,6 +1811,8 @@ export default function KalenderKegiatan() {
         <SuratTugas 
           printData={printData}
           pegawaiCetak={pegawaiCetak}
+          semuaPegawaiCetak={semuaPegawaiCetak}
+          extraActivities={selectedExtraActivities}
           nomorSppd={nomorSppd}
         />
       )}
