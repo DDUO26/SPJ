@@ -1,5 +1,5 @@
 import React from 'react';
-import garudaLogo from '../assets/garuda.png';
+import garudaLogo from '../assets/garuda_emas.png';
 
 export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
   if (!printData) return null;
