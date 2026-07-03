@@ -185,10 +185,31 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
     } catch (error) { alert("Gagal menyimpan perubahan"); }
   };
 
+  const parsePegawai = (pegawaiStr) => {
+    if (!pegawaiStr) return [];
+    const parts = pegawaiStr.split(',').map(p => p.trim()).filter(Boolean);
+    const result = [];
+    const isTitle = (str) => {
+      const lower = str.toLowerCase();
+      if (str.includes('.')) return true;
+      if (/^[A-Z]+$/.test(str) && str.length <= 5) return true;
+      if (['amd', 'kep', 'kes', 'sst', 'skm', 'sgz', 'amg', 'mph', 'mm'].some(t => lower.includes(t))) return true;
+      return false;
+    };
+    parts.forEach(part => {
+      if (result.length > 0 && isTitle(part)) {
+        result[result.length - 1] += ', ' + part;
+      } else {
+        result.push(part);
+      }
+    });
+    return result;
+  };
+
   const bukaModalPrint = (keg) => {
     setPrintData(keg);
-    const daftarNamaPetugas = keg.pegawai ? keg.pegawai.split(',').map(p => p.trim()).filter(Boolean) : [];
-    setPrintPetugas(daftarNamaPetugas.length > 0 ? daftarNamaPetugas[0] : '');
+    const parsed = parsePegawai(keg.pegawai);
+    setPrintPetugas(parsed.length > 0 ? parsed[0] : '');
     setJenisDokumen('SPPD');
     setNomorSppd('');
     setSelectedExtraActivities([]);
@@ -289,15 +310,20 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
   const toggleKegiatan = (keg) => setExpandedKegiatan(prev => ({ ...prev, [keg]: !prev[keg] }));
   const pegawaiCetak = getDataPegawai(printPetugas);
 
+  const parsedPegawaiList = useMemo(() => {
+    if (!printData) return [];
+    return parsePegawai(printData.pegawai);
+  }, [printData]);
+
   const semuaPegawaiCetak = useMemo(() => {
-    if (!printData || !printData.pegawai) return [];
-    return printData.pegawai.split(',').map(nama => getDataPegawai(nama.trim()));
-  }, [printData, daftarPegawai]);
+    if (!printData) return [];
+    return parsedPegawaiList.map(nama => getDataPegawai(nama));
+  }, [parsedPegawaiList, daftarPegawai]);
 
   const relatedActivities = useMemo(() => {
     if (!printData || !printPetugas || (jenisDokumen !== 'SPPD' && jenisDokumen !== 'TUGAS')) return [];
     
-    return dataKegiatan.filter(k => 
+    return daftarKegiatan.filter(k => 
       k.id !== printData.id &&
       k.bulan === printData.bulan &&
       k.program === printData.program &&
@@ -547,12 +573,12 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
                 <label className="block text-sm font-bold text-slate-700 mb-2">2. Pilih Petugas yang Dicetak</label>
                 {jenisDokumen === 'TUGAS' ? (
                   <div className="bg-purple-50 border border-purple-100 rounded-xl p-3 text-sm font-medium text-purple-700">
-                    Sistem akan otomatis mencetak Surat Tugas untuk <strong>semua {printData.pegawai ? printData.pegawai.split(',').length : 0} pegawai</strong> sekaligus di dalam 1 dokumen.
+                    Sistem akan otomatis mencetak Surat Tugas untuk <strong>semua {parsedPegawaiList.length} pegawai</strong> sekaligus di dalam 1 dokumen.
                   </div>
-                ) : printData.pegawai ? (
+                ) : parsedPegawaiList.length > 0 ? (
                   <select value={printPetugas} onChange={(e) => setPrintPetugas(e.target.value)} className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-emerald-500 focus:bg-emerald-50/30">
-                    {printData.pegawai.split(',').map((p, i) => (
-                      <option key={i} value={p.trim()}>{p.trim()}</option>
+                    {parsedPegawaiList.map((p, i) => (
+                      <option key={i} value={p}>{p}</option>
                     ))}
                   </select>
                 ) : (
