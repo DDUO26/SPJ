@@ -291,7 +291,7 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
 
   const semuaPegawaiCetak = useMemo(() => {
     if (!printData || !printData.pegawai) return [];
-    return printData.pegawai.split(',').map(nama => getNamaResmiObject(nama.trim()));
+    return printData.pegawai.split(',').map(nama => getDataPegawai(nama.trim()));
   }, [printData, daftarPegawai]);
 
   const relatedActivities = useMemo(() => {

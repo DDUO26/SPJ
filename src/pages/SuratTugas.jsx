@@ -44,15 +44,17 @@ export default function SuratTugas({ printData, pegawaiCetak, semuaPegawaiCetak,
   // Data kombinasi jika ada kegiatan tambahan (multi-hari)
   const gabungkanTanggal = () => {
     let semuaKegiatan = [printData, ...(extraActivities || [])].sort((a,b) => {
-      const dateA = new Date(a.tanggal ? `${getTahun(a.bulan)}-${String(a.bulan).split(' ')[0]}-${a.tanggal}` : 0);
-      const dateB = new Date(b.tanggal ? `${getTahun(b.bulan)}-${String(b.bulan).split(' ')[0]}-${b.tanggal}` : 0);
+      const dateA = new Date(a.tanggal ? `${getTahun(a.bulan)}-${String(a.bulan || '').split(' ')[0]}-${a.tanggal}` : 0);
+      const dateB = new Date(b.tanggal ? `${getTahun(b.bulan)}-${String(b.bulan || '').split(' ')[0]}-${b.tanggal}` : 0);
       return dateA - dateB;
     });
     
-    const tglArray = semuaKegiatan.map(k => String(k.tanggal).padStart(2, '0'));
-    const formatBulan = printData.bulan.split(' ')[0].charAt(0).toUpperCase() + printData.bulan.split(' ')[0].slice(1).toLowerCase();
+    const tglArray = semuaKegiatan.map(k => String(k.tanggal || '').padStart(2, '0'));
+    const strBulan = printData.bulan || '';
+    const arrBulan = strBulan.split(' ');
+    const formatBulan = arrBulan.length > 0 && arrBulan[0] ? arrBulan[0].charAt(0).toUpperCase() + arrBulan[0].slice(1).toLowerCase() : '';
     
-    return `${tglArray.join(', ')} ${formatBulan} ${tahun}`;
+    return `${tglArray.join(', ')} ${formatBulan} ${tahun}`.trim();
   };
 
   const gabungkanDesa = () => {
