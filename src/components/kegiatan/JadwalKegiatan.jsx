@@ -187,10 +187,10 @@ export default function JadwalKegiatan({ activeRole = 'Admin' }) {
 
   const parsePegawai = (pegawaiStr) => {
     if (!pegawaiStr) return [];
-    const parts = pegawaiStr.split(',').map(p => p.trim()).filter(Boolean);
+    const parts = String(pegawaiStr).split(',').map(p => String(p).trim()).filter(Boolean);
     const result = [];
     const isTitle = (str) => {
-      const lower = str.toLowerCase();
+      const lower = String(str).toLowerCase();
       if (str.includes('.')) return true;
       if (/^[A-Z]+$/.test(str) && str.length <= 5) return true;
       if (['amd', 'kep', 'kes', 'sst', 'skm', 'sgz', 'amg', 'mph', 'mm'].some(t => lower.includes(t))) return true;

@@ -8,8 +8,8 @@ export default function CetakRiil({ printData, pegawaiCetak, bendahara, kpa, ppt
   // Fungsi Format Tanggal
   const formatTgl = (tgl, bln) => {
     if (!tgl || !bln) return '... ................. 202...';
-    const tahun = bln.split(' ')[1] || new Date().getFullYear();
-    const namaBulan = bln.split(' ')[0];
+    const tahun = String(bln).split(' ')[1] || new Date().getFullYear();
+    const namaBulan = String(bln).split(' ')[0];
     const formatBulan = namaBulan.charAt(0).toUpperCase() + namaBulan.slice(1).toLowerCase();
     return `${String(tgl).padStart(2, '0')} ${formatBulan} ${tahun}`;
   };
@@ -32,7 +32,7 @@ export default function CetakRiil({ printData, pegawaiCetak, bendahara, kpa, ppt
   };
   const getBulanRomawi = (bln) => {
     if (!bln) return 'VI';
-    const namaBulan = bln.split(' ')[0].toUpperCase();
+    const namaBulan = String(bln).split(' ')[0].toUpperCase();
     const mapBulan = {
       JANUARI: 'I', FEBRUARI: 'II', MARET: 'III', APRIL: 'IV',
       MEI: 'V', JUNI: 'VI', JULI: 'VII', AGUSTUS: 'VIII',
@@ -41,7 +41,7 @@ export default function CetakRiil({ printData, pegawaiCetak, bendahara, kpa, ppt
     return mapBulan[namaBulan] || 'VI';
   };
 
-  const getTahun = (bln) => bln ? (bln.split(' ')[1] || new Date().getFullYear()) : new Date().getFullYear();
+  const getTahun = (bln) => bln ? (String(bln).split(' ')[1] || new Date().getFullYear()) : new Date().getFullYear();
 
   // Fungsi Terbilang
   const angkaTerbilang = (angka) => {

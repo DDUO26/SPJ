@@ -16,15 +16,15 @@ export default function SuratTugas({ printData, pegawaiCetak, semuaPegawaiCetak,
 
   const formatTgl = (tgl, bln) => {
     if (!tgl || !bln) return '... ................. 202...';
-    const tahun = bln.split(' ')[1] || new Date().getFullYear();
-    const namaBulan = bln.split(' ')[0];
+    const tahun = String(bln).split(' ')[1] || new Date().getFullYear();
+    const namaBulan = String(bln).split(' ')[0];
     const formatBulan = namaBulan.charAt(0).toUpperCase() + namaBulan.slice(1).toLowerCase();
     return `${String(tgl)} ${formatBulan} ${tahun}`;
   };
 
   const getBulanRomawi = (bln) => {
     if (!bln) return '...';
-    const namaBulan = bln.split(' ')[0].toUpperCase();
+    const namaBulan = String(bln).split(' ')[0].toUpperCase();
     const mapBulan = {
       JANUARI: 'I', FEBRUARI: 'II', MARET: 'III', APRIL: 'IV',
       MEI: 'V', JUNI: 'VI', JULI: 'VII', AGUSTUS: 'VIII',
@@ -35,7 +35,7 @@ export default function SuratTugas({ printData, pegawaiCetak, semuaPegawaiCetak,
 
   const getTahun = (bln) => {
     if (!bln) return new Date().getFullYear();
-    return bln.split(' ')[1] || new Date().getFullYear();
+    return String(bln).split(' ')[1] || new Date().getFullYear();
   };
 
   const romawi = getBulanRomawi(printData.bulan);
