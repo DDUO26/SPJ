@@ -144,6 +144,117 @@ export default function SuratTugas({ printData, pegawaiCetak, nomorSppd }) {
             <tr>
               <td className="align-top pb-1"></td>
               <td className="align-top pb-1"></td>
+              <td className="align-top pb-1">3.</td>
+              <td className="pb-1 text-justify pr-4">Pembiayaan kegiatan dibebankan pada DAK Non Fisik BOK Puskesmas Silian T.A {tahun};</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* TANDA TANGAN (Halaman 1) */}
+        <div className="flex justify-end pr-4 mb-4">
+          <div className="w-[350px]">
+            <p className="mb-0">Ratahan,</p>
+            <p className="font-bold mb-24">WAKIL BUPATI MINAHASA TENGGARA</p>
+            <p className="font-bold uppercase">FREDY TUDA</p>
+          </div>
+        </div>
+
+        {/* FOOTER (Halaman 1) */}
+        <div className="absolute bottom-4 left-0 right-0 text-center" style={{ fontSize: '9pt', lineHeight: '1.2' }}>
+          Alamat: Jl. Soekarno, Kelurahan Lowu Satu, Kecamatan Ratahan<br/>
+          Website: www.mitrakab.go.id, Email: minahasatenggara@gmail.com<br/>
+          Ratahan 95695
+        </div>
+      </div>
+
+      {/* PAGE BREAK UNTUK HALAMAN KEDUA (LAMPIRAN PARAF) */}
+      <div className="page-break" style={{ pageBreakBefore: 'always' }}></div>
+
+      {/* HALAMAN 2: LAMPIRAN KEDUA (DENGAN TABEL PARAF) */}
+      <div className="w-full box-border relative min-h-[267mm]">
+        
+        {/* LOGO GARUDA */}
+        <div className="flex justify-center mb-2 mt-4">
+          <img src={garudaLogo} alt="Garuda" className="h-[2.5cm] w-auto object-contain" />
+        </div>
+
+        {/* HEADER */}
+        <div className="text-center font-bold mb-6">
+          <div style={{ fontSize: '13pt', marginBottom: '8px' }}>WAKIL BUPATI MINAHASA TENGGARA</div>
+          <div style={{ fontSize: '12pt', marginBottom: '0px' }}>SURAT TUGAS</div>
+          <div style={{ fontSize: '11pt', fontWeight: 'normal', position: 'relative', left: '-25px' }}>NOMOR : </div>
+        </div>
+
+        {/* KONTEN KEMBALI */}
+        <table className="w-full mb-4">
+          <tbody>
+            <tr>
+              <td className="w-28 align-top pb-2 pl-4">Dasar</td>
+              <td className="w-4 align-top pb-2 text-center">:</td>
+              <td className="text-justify align-top pb-2 pr-4">
+                Telaahan Staf tentang Kegiatan Pelayanan Puskesmas di Luar Gedung yang bersumber Dana Alokasi Khusus (DAK) Non Fisik Bantuan Operasional Puskesmas (BOK) Tahun Anggaran {tahun} Nomor : 440/DINKES-MT/PKM-SLN/{tahun}/{romawi}/{nomorSppd ? nomorSppd : '       '}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="text-center font-bold mb-4">
+          <div>MEMERINTAHKAN</div>
+        </div>
+
+        <table className="w-full mb-4">
+          <tbody>
+            <tr>
+              <td className="w-28 align-top pb-1 pl-4">Kepada</td>
+              <td className="w-4 align-top pb-1 text-center">:</td>
+              <td className="w-6 align-top pb-1">1.</td>
+              <td className="w-24 align-top pb-1">Nama</td>
+              <td className="w-4 align-top pb-1 text-center">:</td>
+              <td className="pb-1">{pegawaiCetak?.nama || '...........................................'}</td>
+            </tr>
+            <tr>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1">NI PPPK</td>
+              <td className="align-top pb-1 text-center">:</td>
+              <td className="pb-1">{pegawaiCetak?.nip ? formatNip(pegawaiCetak.nip) : '...........................................'}</td>
+            </tr>
+            <tr>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1">Pangkat/Gol</td>
+              <td className="align-top pb-1 text-center">:</td>
+              <td className="pb-1">{pegawaiCetak?.golongan || '...........................................'}</td>
+            </tr>
+            <tr>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1">Jabatan</td>
+              <td className="align-top pb-1 text-center">:</td>
+              <td className="pb-1">{pegawaiCetak?.jabatanFungsional || '...........................................'}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table className="w-full mb-10">
+          <tbody>
+            <tr>
+              <td className="w-28 align-top pb-1 pl-4">Tanggal</td>
+              <td className="w-4 align-top pb-1 text-center">:</td>
+              <td colSpan="2" className="pb-1">{formatTgl(printData.tanggal, printData.bulan)}</td>
+            </tr>
+            <tr>
+              <td className="align-top pb-1 pl-4">Untuk</td>
+              <td className="align-top pb-1 text-center">:</td>
+              <td className="w-6 align-top pb-1">1.</td>
+              <td className="pb-1 text-justify pr-4">Pelaksanaan {kegiatanText};</td>
+            </tr>
+            <tr>
+              <td className="align-top pb-1"></td>
+              <td className="align-top pb-1"></td>
               <td className="align-top pb-1">2.</td>
               <td className="pb-1 text-justify pr-4">Kegiatan dilaksanakan di {tujuanText};</td>
             </tr>
