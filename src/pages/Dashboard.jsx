@@ -12,11 +12,9 @@ import {
 import Tilt from 'react-parallax-tilt';
 
 import imgBerkas3D from '../assets/berkas_3d_v2.png';
-import HasilPemeriksaan from '../components/HasilPemeriksaan';
 import AktivitasTerbaru from '../components/AktivitasTerbaru';
 import { ambilSemuaSpjDb } from '../services/spjService';
 export default function Dashboard({ activeRole, activeUser }) {
-  const [activeTab, setActiveTab] = useState(activeRole === 'Pegawai' ? 'pemeriksaan' : 'statistik'); // 'statistik' | 'pemeriksaan'
   const [daftarSpj, setDaftarSpj] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState('ALL');
 
@@ -110,34 +108,6 @@ export default function Dashboard({ activeRole, activeUser }) {
 
   return (
     <div className="space-y-6">
-      
-      {/* Tab Navigation */}
-      <div className="flex space-x-2 border-b border-slate-200 pb-2 mb-6 overflow-x-auto scrollbar-none whitespace-nowrap">
-        <button
-          onClick={() => setActiveTab('statistik')}
-          className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
-            activeTab === 'statistik' 
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' 
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-          }`}
-        >
-          <BarChart2 size={18} />
-          Statistik & Ringkasan
-        </button>
-        <button
-          onClick={() => setActiveTab('pemeriksaan')}
-          className={`px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
-            activeTab === 'pemeriksaan' 
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30' 
-              : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-          }`}
-        >
-          <FileCheck size={18} />
-          Hasil Pemeriksaan Berkas
-        </button>
-      </div>
-
-      {activeTab === 'statistik' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* 4 KARTU STATISTIK ATAS */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -380,11 +350,6 @@ export default function Dashboard({ activeRole, activeUser }) {
 
           </div>
         </div>
-      )}
-
-      {activeTab === 'pemeriksaan' && (
-        <HasilPemeriksaan activeRole={activeRole} activeUser={activeUser} />
-      )}
     </div>
   );
 }

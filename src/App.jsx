@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { 
   Home, FileText, Activity, Database, Folder, 
   CheckCircle, Hospital, BarChart2, Settings, 
-  ChevronDown, Bell, Calendar, LogOut, Menu, X
+  ChevronDown, Bell, Calendar, LogOut, Menu, X, FileCheck
 } from 'lucide-react';
 
 // Memanggil 3 Ruangan yang sudah kita buat
@@ -14,15 +16,18 @@ import Verifikasi from './pages/Verifikasi';
 import Laporan from './pages/Laporan';
 import Pengaturan from './pages/Pengaturan';
 import Login from './pages/Login';
+import { ambilSemuaSpjDb } from './services/spjService';
+import HasilPemeriksaan from './components/HasilPemeriksaan';
 
 export default function App() {
-  // Mengatur halaman pertama yang terbuka adalah Dashboard
-  const [activeMenu, setActiveMenu] = useState('Dashboard');
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('simbokUser');
     return saved ? JSON.parse(saved) : null;
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (currentUser) {
@@ -35,36 +40,67 @@ export default function App() {
   const activeRole = currentUser?.peran || 'Pegawai';
 
   useEffect(() => {
-    if (activeRole === 'Pegawai' && !['Dashboard', 'Daftar POA', 'Master Data'].includes(activeMenu)) {
-      setActiveMenu('Dashboard');
-    }
-  }, [activeRole, activeMenu]);
-
-  useEffect(() => {
     const handleNavigate = (e) => {
       if (e.detail && e.detail.menu) {
-        setActiveMenu(e.detail.menu);
+        const menuMap = {
+          'Dashboard': '/dashboard',
+          'Status SPJ': '/status-spj',
+          'SPJ': '/spj',
+          'Daftar POA': '/poa',
+          'Master Data': '/master-data',
+          'Dokumen': '/dokumen',
+          'Verifikasi': '/verifikasi',
+          'Puskesmas': '/puskesmas',
+          'Laporan': '/laporan',
+          'Pengaturan': '/pengaturan'
+        };
+        const path = menuMap[e.detail.menu];
+        if (path) navigate(path);
       }
     };
     window.addEventListener('navigateMenu', handleNavigate);
     return () => window.removeEventListener('navigateMenu', handleNavigate);
-  }, []);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!currentUser || activeRole === 'Pegawai') return;
+
+    const hitungPending = async () => {
+      try {
+        const semuaSpj = await ambilSemuaSpjDb();
+        const jumlahPending = semuaSpj.filter(spj => spj.status === 'Menunggu Verifikasi').length;
+        setPendingCount(jumlahPending);
+      } catch (error) {
+        console.error("Gagal menghitung SPJ pending:", error);
+      }
+    };
+
+    hitungPending();
+
+    const handleSpjChange = () => {
+      hitungPending();
+    };
+
+    window.addEventListener('spjDataChanged', handleSpjChange);
+    return () => window.removeEventListener('spjDataChanged', handleSpjChange);
+  }, [currentUser, activeRole]);
 
   const menuItems = [
-    { name: 'Dashboard', icon: <Home size={20} /> },
-    { name: 'SPJ', icon: <FileText size={20} /> },
-    { name: 'Daftar POA', icon: <Activity size={20} /> },
-    { name: 'Master Data', icon: <Database size={20} /> },
-    { name: 'Dokumen', icon: <Folder size={20} /> },
-    { name: 'Verifikasi', icon: <CheckCircle size={20} /> },
-    { name: 'Puskesmas', icon: <Hospital size={20} /> },
-    { name: 'Laporan', icon: <BarChart2 size={20} /> },
-    { name: 'Pengaturan', icon: <Settings size={20} /> },
+    { name: 'Dashboard', path: '/dashboard', icon: <Home size={20} /> },
+    { name: 'Status SPJ', path: '/status-spj', icon: <FileCheck size={20} /> },
+    { name: 'SPJ', path: '/spj', icon: <FileText size={20} /> },
+    { name: 'Daftar POA', path: '/poa', icon: <Activity size={20} /> },
+    { name: 'Master Data', path: '/master-data', icon: <Database size={20} /> },
+    { name: 'Dokumen', path: '/dokumen', icon: <Folder size={20} /> },
+    { name: 'Verifikasi', path: '/verifikasi', icon: <CheckCircle size={20} />, badge: pendingCount },
+    { name: 'Puskesmas', path: '/puskesmas', icon: <Hospital size={20} /> },
+    { name: 'Laporan', path: '/laporan', icon: <BarChart2 size={20} /> },
+    { name: 'Pengaturan', path: '/pengaturan', icon: <Settings size={20} /> },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
     if (activeRole === 'Pegawai') {
-      return ['Dashboard', 'Daftar POA', 'Master Data'].includes(item.name);
+      return ['Dashboard', 'Status SPJ', 'Daftar POA', 'Master Data'].includes(item.name);
     }
     return true;
   });
@@ -75,6 +111,7 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden w-full relative">
+      <Toaster position="top-center" />
       
       {/* OVERLAY UNTUK MOBILE MENU */}
       {isMobileMenuOpen && (
@@ -116,21 +153,26 @@ export default function App() {
 
           <nav className="mt-2 px-4 space-y-1 overflow-y-auto">
             {filteredMenuItems.map((item) => (
-              <button
+              <NavLink
                 key={item.name}
-                onClick={() => {
-                  setActiveMenu(item.name);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl transition-all duration-300 ${
-                  activeMenu === item.name 
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) => `w-full flex items-center justify-between px-5 py-3.5 rounded-2xl transition-all duration-300 ${
+                  isActive 
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30 font-bold' 
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/50 font-medium'
                 }`}
               >
-                {item.icon}
-                <span className="text-sm">{item.name}</span>
-              </button>
+                <div className="flex items-center gap-3">
+                  {item.icon}
+                  <span className="text-sm">{item.name}</span>
+                </div>
+                {item.badge > 0 && (
+                  <div className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full min-w-[24px] text-center shadow-[0_0_12px_rgba(239,68,68,0.6)] animate-pulse">
+                    {item.badge}
+                  </div>
+                )}
+              </NavLink>
             ))}
           </nav>
         </div>
@@ -156,7 +198,14 @@ export default function App() {
               </div>
             </div>
             <button 
-              onClick={() => setCurrentUser(null)} 
+              onClick={() => {
+                import('firebase/auth').then(({ signOut }) => {
+                  import('./firebase').then(({ auth }) => {
+                    signOut(auth);
+                  });
+                });
+                setCurrentUser(null);
+              }} 
               className="p-2 bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-xl transition-colors shrink-0" 
               title="Keluar"
             >
@@ -200,13 +249,30 @@ export default function App() {
 
         {/* MENGGANTI HALAMAN SESUAI KLIK MENU */}
         <div className="p-4 md:p-8 w-full space-y-6 md:space-y-8 print:p-0 print:space-y-0">
-          {activeMenu === 'Dashboard' && <Dashboard activeRole={activeRole} activeUser={currentUser} />}
-          {activeMenu === 'Master Data' && <MasterData activeRole={activeRole} />}
-          {activeMenu === 'SPJ' && <Sppd />}
-          {activeMenu === 'Daftar POA' && <Kegiatan activeRole={activeRole} />}
-          {activeMenu === 'Verifikasi' && <Verifikasi />}
-          {activeMenu === 'Laporan' && <Laporan />}
-          {activeMenu === 'Pengaturan' && <Pengaturan />}
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            
+            {/* Rute Bebas (Bisa diakses Pegawai & Role Lain) */}
+            <Route path="/dashboard" element={<Dashboard activeRole={activeRole} activeUser={currentUser} />} />
+            <Route path="/status-spj" element={<HasilPemeriksaan activeRole={activeRole} activeUser={currentUser} />} />
+            <Route path="/poa" element={<Kegiatan activeRole={activeRole} />} />
+            <Route path="/master-data" element={<MasterData activeRole={activeRole} />} />
+            
+            {/* Rute Khusus (Admin / Bendahara) */}
+            {activeRole !== 'Pegawai' && (
+              <>
+                <Route path="/spj" element={<Sppd />} />
+                <Route path="/verifikasi" element={<Verifikasi />} />
+                <Route path="/laporan" element={<Laporan />} />
+                <Route path="/pengaturan" element={<Pengaturan />} />
+                <Route path="/dokumen" element={<div className="p-10 text-center font-bold text-slate-500">Modul Dokumen Belum Tersedia</div>} />
+                <Route path="/puskesmas" element={<div className="p-10 text-center font-bold text-slate-500">Modul Puskesmas Belum Tersedia</div>} />
+              </>
+            )}
+
+            {/* Fallback Jika tidak ada route yang cocok / Tidak berhak */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </div>
 
       </div>
