@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-[#111827]/40 backdrop-blur-xl border border-white/5;
+  }
+  .glass-card {
+    @apply bg-[#151B2B]/60 backdrop-blur-md border border-white/5;
+  }
+  .glow-text-blue {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  .glow-text-indigo {
+    text-shadow: 0 0 10px rgba(99, 102, 241, 0.5), 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+}
+
+/* Animations */
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes wave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Circular Progress Animation */
+@keyframes circle-dash {
+  0% { stroke-dashoffset: 600; }
+  100% { stroke-dashoffset: var(--target-offset, 0); }
+}
+
+.animate-circle {
+  animation: circle-dash 2s ease-out forwards;
+}
+
+/* Animated gradient lines for cards */
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Base utility animations */
+.animate-spin-slow {
+  animation: spin-slow 4s linear infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+/* Conic gradient border effect */
+.border-glow-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  padding: 1px; 
+}
+
+.border-glow-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    transparent,
+    transparent,
+    transparent,
+    #3b82f6,
+    #8b5cf6,
+    transparent
+  );
+  animation: spin-slow 4s linear infinite;
+  z-index: 0;
+}
+
+.border-glow-inner {
+  position: relative;
+  background-color: #0F172A;
+  backdrop-filter: blur(16px);
+  border-radius: calc(1.5rem - 1px);
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+
+/* SVG Line Animations */
+.neon-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: dash 5s linear infinite alternate;
+}
+
+@keyframes dash {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Neon bottom border line */
+.neon-bottom-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--neon-color, #3b82f6), transparent);
+  opacity: 0.8;
+  box-shadow: 0 -2px 10px var(--neon-color, #3b82f6);
+}

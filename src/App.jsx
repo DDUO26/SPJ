@@ -109,8 +109,10 @@ export default function App() {
     return <Login onLogin={setCurrentUser} />;
   }
 
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/';
+
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans overflow-hidden w-full relative">
+    <div className={`flex h-screen ${isDashboard ? 'bg-[#060913]' : 'bg-[#F8FAFC]'} font-sans overflow-hidden w-full relative`}>
       <Toaster position="top-center" />
       
       {/* OVERLAY UNTUK MOBILE MENU */}
@@ -216,32 +218,32 @@ export default function App() {
       </div>
 
       {/* AREA KONTEN UTAMA */}
-      <div className="flex-1 overflow-auto w-full bg-slate-50 relative print:overflow-visible print:bg-white flex flex-col">
+      <div className={`flex-1 overflow-auto w-full ${isDashboard ? 'bg-[#060913]' : 'bg-slate-50'} relative print:overflow-visible print:bg-white flex flex-col`}>
         
         {/* HEADER ATAS */}
-        <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 py-4 md:py-5 flex justify-between items-center border-b border-slate-200 print:hidden">
+        <header className={`${isDashboard ? 'bg-[#0B1120]/80 border-white/5' : 'bg-white/80 border-slate-200'} backdrop-blur-md sticky top-0 z-30 px-4 md:px-8 py-4 md:py-5 flex justify-between items-center border-b print:hidden`}>
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 -ml-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors"
+              className={`lg:hidden p-2 -ml-2 rounded-xl transition-colors ${isDashboard ? 'bg-white/5 hover:bg-white/10 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
             >
               <Menu size={20} />
             </button>
             <div>
-              <h2 className="text-lg md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <h2 className={`text-lg md:text-2xl font-bold flex items-center gap-2 ${isDashboard ? 'text-white' : 'text-slate-800'}`}>
                 Halo, {currentUser.nama.split(' ')[0]} <span className="text-xl hidden sm:inline">👋</span>
               </h2>
-              <p className="text-slate-500 text-xs md:text-sm mt-0.5 hidden sm:block">Kelola data BOK dengan mudah dan akurat</p>
+              <p className={`text-xs md:text-sm mt-0.5 hidden sm:block ${isDashboard ? 'text-slate-300' : 'text-slate-500'}`}>Kelola data BOK dengan mudah dan akurat</p>
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-             <div className="hidden sm:flex items-center gap-2 bg-white border border-slate-200 px-3 md:px-4 py-2 rounded-xl shadow-sm">
-                <Calendar size={16} className="text-slate-400" />
-                <span className="text-sm font-semibold text-slate-700">Tahun Anggaran 2025</span>
-                <ChevronDown size={16} className="text-slate-400 ml-2" />
+             <div className={`hidden sm:flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl shadow-sm border ${isDashboard ? 'bg-[#151B2B] border-white/10' : 'bg-white border-slate-200'}`}>
+                <Calendar size={16} className={isDashboard ? 'text-slate-300' : 'text-slate-400'} />
+                <span className={`text-sm font-semibold ${isDashboard ? 'text-white' : 'text-slate-700'}`}>Tahun Anggaran 2025</span>
+                <ChevronDown size={16} className={isDashboard ? 'text-slate-300 ml-2' : 'text-slate-400 ml-2'} />
              </div>
-             <button className="relative bg-white border border-slate-200 p-2.5 rounded-xl shadow-sm hover:bg-slate-50">
-                <Bell size={20} className="text-slate-600" />
+             <button className={`relative p-2.5 rounded-xl shadow-sm border ${isDashboard ? 'bg-[#151B2B] border-white/10 hover:bg-white/5 text-slate-300' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'}`}>
+                <Bell size={20} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
              </button>
           </div>
