@@ -1,0 +1,1 @@
+var e=`/SPJ/assets/logo%20mitra-CHi9XxS1.png`,t=`/SPJ/assets/logopkm-e14ashPJ.png`;export{e as n,t};
