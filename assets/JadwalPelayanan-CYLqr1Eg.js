@@ -743,6 +743,39 @@ function JadwalPelayananPage({ activeRole }) {
     [people]
   );
 
+  const canViewAll = ["Admin", "Pimpinan", "Bendahara"].includes(activeRole);
+  const isPersonalOnly = !canViewAll;
+  const currentUser = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("simbok_user") || "null");
+    } catch {
+      return null;
+    }
+  }, [activeRole]);
+
+  const matchesCurrentUser = React.useCallback(
+    (row) => {
+      if (!isPersonalOnly) return true;
+      if (!currentUser) return false;
+      if (currentUser.pegawaiId && row?.pegawaiId && row.pegawaiId === currentUser.pegawaiId) {
+        return true;
+      }
+      const rName = normalizeName(resolveName(row));
+      const uName = normalizeName(currentUser.nama || "");
+      return Boolean(rName && uName && (rName === uName || rName.includes(uName) || uName.includes(rName)));
+    },
+    [isPersonalOnly, currentUser, resolveName]
+  );
+
+  const visibleRoster = React.useMemo(() => {
+    if (!roster) return null;
+    if (!isPersonalOnly) return roster;
+    return {
+      ...roster,
+      rows: (roster.rows || []).filter(matchesCurrentUser)
+    };
+  }, [roster, isPersonalOnly, matchesCurrentUser]);
+
   // Load or Auto-Generate Roster whenever month or team changes
   React.useEffect(() => {
     let active = true;
@@ -1245,7 +1278,7 @@ function JadwalPelayananPage({ activeRole }) {
 
       // Data Rows
       let currRow = hStart + 3;
-      (roster.rows || []).forEach((row, idx) => {
+      ((visibleRoster || roster).rows || []).forEach((row, idx) => {
         const displayNo = usePdfNo && row.pdfNo ? row.pdfNo : idx + 1;
         const rObj = ws.getRow(currRow);
         rObj.height = 16;
@@ -1372,7 +1405,7 @@ function JadwalPelayananPage({ activeRole }) {
     setErrorMsg("");
     try {
       const totalDays = getDaysInMonth(month);
-      const rows = roster.rows || [];
+      const rows = (visibleRoster || roster).rows || [];
       const sig = { ...DEFAULT_SIGNATORIES, ...(roster.signatories || {}) };
       const usePdfNo = sig.numberStyle !== "sequential";
       const teamUpper = (team || "PERAWAT").toUpperCase();
@@ -2081,6 +2114,27 @@ function JadwalPelayananPage({ activeRole }) {
 
     loading && el("p", { className: "no-roster-print" }, "Memuat jadwal pelayanan…"),
 
+    isPersonalOnly &&
+      el(
+        "div",
+        {
+          className: "no-roster-print",
+          style: {
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "12px",
+            padding: "11px 16px",
+            marginBottom: "12px",
+            fontSize: "12.5px",
+            color: "#166534",
+            fontWeight: 600
+          }
+        },
+        `🔒 Mode Privasi Pegawai Aktif — Menampilkan jadwal dinas pribadi untuk ${
+          currentUser?.nama || "Akun Anda"
+        }. Data jadwal pegawai lain disembunyikan (hanya Admin, Pimpinan, dan Bendahara yang dapat melihat seluruh pegawai).`
+      ),
+
     roster &&
       el(
         React.Fragment,
@@ -2278,6 +2332,7 @@ function JadwalPelayananPage({ activeRole }) {
               "tbody",
               null,
               roster.rows.map((row, rIdx) => {
+                if (!matchesCurrentUser(row)) return null;
                 const nameStr = resolveName(row);
                 const matchesSearch = nameStr.toLowerCase().includes(searchQuery.toLowerCase());
                 if (!matchesSearch) return null;
@@ -2528,7 +2583,9 @@ function JadwalPelayananPage({ activeRole }) {
             "div",
             { className: "roster-cards" },
             Object.entries(SHIFT_LABELS).map(([code, label]) => {
-              const assigned = roster.rows.filter((r) => r.shifts?.[selectedDayInspect] === code);
+              const assigned = roster.rows.filter(
+                (r) => matchesCurrentUser(r) && r.shifts?.[selectedDayInspect] === code
+              );
               return el(
                 "article",
                 { key: code, className: `shift-${code}` },
@@ -2611,7 +2668,7 @@ function JadwalPelayananPage({ activeRole }) {
             )
           ),
           el(OfficialPrintSchedule, {
-            roster,
+            roster: visibleRoster || roster,
             monthStr: month,
             team,
             resolveName
