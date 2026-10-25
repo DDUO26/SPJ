@@ -10,13 +10,52 @@ import {
   M as updateDoc,
   I as doc,
   T as addDoc,
-  d as resolveSpjStatus
+  d as resolveSpjStatus,
+  p as expandKegiatanDates
 } from './index-CLfOyomA.js';
+import { s as simpanSpjDb, l as updateSpjDb } from './spjService-BL-ROTsV.js';
 
 const React = interopRequire(getReact(), 1);
 const jsxRuntime = getJsxRuntime();
 const { useState, useEffect, useMemo, useRef } = React;
 const { jsx, jsxs, Fragment } = jsxRuntime;
+
+export const FULL_CHECKLIST_TRUE = {
+  sppd: true,
+  suratTugas: true,
+  daftarHadir: true,
+  dokumentasi: true,
+  riilCost: true,
+  kwitansi: true,
+  suratPernyataan: true,
+  laporan: true
+};
+
+export const FULL_CHECKLIST_FALSE = {
+  sppd: false,
+  suratTugas: false,
+  daftarHadir: false,
+  dokumentasi: false,
+  riilCost: false,
+  kwitansi: false,
+  suratPernyataan: false,
+  laporan: false
+};
+
+const MONTH_NAME_MAP = {
+  januari: 1, jan: 1,
+  februari: 2, feb: 2, pebruari: 2,
+  maret: 3, mar: 3,
+  april: 4, apr: 4,
+  mei: 5,
+  juni: 6, jun: 6,
+  juli: 7, jul: 7,
+  agustus: 8, agu: 8, ags: 8, agust: 8,
+  september: 9, sep: 9, sept: 9,
+  oktober: 10, okt: 10,
+  november: 11, nov: 11, nopember: 11,
+  desember: 12, des: 12
+};
 
 export function getActiveUserName(userOrName) {
   if (!userOrName) return '';
@@ -50,6 +89,227 @@ export function isSameEmployeeName(nameA, nameB) {
 
 export function canRoleViewAllData(role) {
   return ['Admin', 'Pimpinan', 'Bendahara'].includes(role);
+}
+
+// Parse date/month filter from natural language query
+export function parseDateFilterFromQuery(rawQuery) {
+  const q = String(rawQuery || '').toLowerCase();
+
+  // 1. ISO format YYYY-MM-DD
+  const isoMatch = q.match(/\b(202\d)-(\d{1,2})-(\d{1,2})\b/);
+  if (isoMatch) {
+    const y = isoMatch[1];
+    const m = String(parseInt(isoMatch[2], 10)).padStart(2, '0');
+    const d = String(parseInt(isoMatch[3], 10)).padStart(2, '0');
+    return { type: 'EXACT_DATE', iso: `${y}-${m}-${d}`, label: `tanggal ${y}-${m}-${d}` };
+  }
+
+  // 2. DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = q.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](202\d)\b/);
+  if (dmyMatch) {
+    const d = String(parseInt(dmyMatch[1], 10)).padStart(2, '0');
+    const m = String(parseInt(dmyMatch[2], 10)).padStart(2, '0');
+    const y = dmyMatch[3];
+    return { type: 'EXACT_DATE', iso: `${y}-${m}-${d}`, label: `tanggal ${y}-${m}-${d}` };
+  }
+
+  // 3. Natural Indonesian date: e.g. "15 maret 2026" or "tanggal 15 maret" or "15 mar"
+  for (const [mName, mNum] of Object.entries(MONTH_NAME_MAP)) {
+    const regexDayMonth = new RegExp(`\\b(\\d{1,2})\\s+${mName}(?:\\s+(202\\d))?\\b`, 'i');
+    const matchDM = q.match(regexDayMonth);
+    if (matchDM) {
+      const day = parseInt(matchDM[1], 10);
+      const year = matchDM[2] ? parseInt(matchDM[2], 10) : null;
+      return {
+        type: 'DAY_MONTH',
+        day,
+        month: mNum,
+        year,
+        label: `tanggal ${day} ${mName.charAt(0).toUpperCase() + mName.slice(1)}${year ? ' ' + year : ''}`
+      };
+    }
+  }
+
+  // 4. DD/MM without year: e.g. "15/03" or "15-03"
+  const dmShort = q.match(/\b(\d{1,2})[\/\-](\d{1,2})\b/);
+  if (dmShort) {
+    const day = parseInt(dmShort[1], 10);
+    const month = parseInt(dmShort[2], 10);
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      return {
+        type: 'DAY_MONTH',
+        day,
+        month,
+        year: null,
+        label: `tanggal ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`
+      };
+    }
+  }
+
+  // 5. Day only: "tanggal 15" or "tgl 15"
+  const dayOnly = q.match(/\b(?:tanggal|tgl)\s+(\d{1,2})\b/);
+  if (dayOnly) {
+    const day = parseInt(dayOnly[1], 10);
+    if (day >= 1 && day <= 31) {
+      return { type: 'DAY_ONLY', day, label: `tanggal ${day}` };
+    }
+  }
+
+  // 6. Month only: "bulan maret" or mentions a month name
+  for (const [mName, mNum] of Object.entries(MONTH_NAME_MAP)) {
+    const regexMonth = new RegExp(`\\b${mName}(?:\\s+(202\\d))?\\b`, 'i');
+    const matchM = q.match(regexMonth);
+    if (matchM) {
+      const year = matchM[1] ? parseInt(matchM[1], 10) : null;
+      return {
+        type: 'MONTH_ONLY',
+        month: mNum,
+        year,
+        label: `bulan ${mName.charAt(0).toUpperCase() + mName.slice(1)}${year ? ' ' + year : ''}`
+      };
+    }
+  }
+
+  return { type: 'ALL', label: 'semua tanggal' };
+}
+
+export function doesDateMatchFilter(dateStr, filter) {
+  if (!filter || filter.type === 'ALL') return true;
+  const s = String(dateStr || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const y = parseInt(s.slice(0, 4), 10);
+  const m = parseInt(s.slice(5, 7), 10);
+  const d = parseInt(s.slice(8, 10), 10);
+
+  if (filter.type === 'EXACT_DATE') return s === filter.iso;
+  if (filter.type === 'DAY_MONTH') {
+    if (d !== filter.day || m !== filter.month) return false;
+    if (filter.year && y !== filter.year) return false;
+    return true;
+  }
+  if (filter.type === 'DAY_ONLY') return d === filter.day;
+  if (filter.type === 'MONTH_ONLY') {
+    if (m !== filter.month) return false;
+    if (filter.year && y !== filter.year) return false;
+    return true;
+  }
+  return true;
+}
+
+// Build combined SPJ + Virtual POA items for a specific employee and date filter
+export function findTargetEntriesForEmployee(targetName, dateFilter, { pegawaiList = [], spjList = [], kegiatanList = [] }) {
+  const results = [];
+  const matchedSpjKeys = new Set();
+
+  // 1. Existing SPJ records
+  (spjList || []).forEach((s) => {
+    if (isSameEmployeeName(s.pegawaiNama, targetName) && doesDateMatchFilter(s.tanggal, dateFilter)) {
+      const key = `${s.kegiatanId || s.program || ''}__${s.tanggal}`;
+      matchedSpjKeys.add(key);
+      results.push({
+        ...s,
+        isVirtual: false
+      });
+    }
+  });
+
+  // 2. Virtual POA records from kegiatanList that don't have an SPJ document yet
+  (kegiatanList || []).forEach((k) => {
+    const empObj = (pegawaiList || []).find((p) => p.id === k.pegawaiId);
+    const kPegawaiText = empObj ? empObj.nama : k.pegawai || '';
+    if (!isSameEmployeeName(kPegawaiText, targetName)) return;
+
+    const dates = typeof expandKegiatanDates === 'function' ? expandKegiatanDates(k.tanggal, k.bulan) : [k.tanggal];
+    (dates || []).forEach((tgl) => {
+      if (!doesDateMatchFilter(tgl, dateFilter)) return;
+      const alreadyInSpj = results.some(
+        (r) => r.tanggal === tgl && (r.kegiatanId === k.id || r.program === (k.program || '(Umum)'))
+      );
+      if (!alreadyInSpj) {
+        results.push({
+          id: `virtual_${k.id}_${targetName}_${tgl}`,
+          kegiatanId: k.id,
+          kegiatan: k.kegiatan || '',
+          pegawaiNama: targetName,
+          tanggal: tgl,
+          program: k.program || '(Umum)',
+          anggaran: Number(k.dana) || 0,
+          checklist: {},
+          catatan: '',
+          isVirtual: true
+        });
+      }
+    });
+  });
+
+  return results.sort((a, b) => String(a.tanggal || '').localeCompare(String(b.tanggal || '')));
+}
+
+// Match an employee name from free-text query
+export function matchEmployeeFromQuery(rawQuery, { pegawaiList = [], spjList = [], kegiatanList = [] }) {
+  const q = String(rawQuery || '')
+    .toLowerCase()
+    .replace(/[.,]/g, ' ');
+
+  const candidateNames = new Set();
+  (pegawaiList || []).forEach((p) => p?.nama && candidateNames.add(p.nama));
+  (spjList || []).forEach((s) => s?.pegawaiNama && candidateNames.add(s.pegawaiNama));
+  (kegiatanList || []).forEach((k) => {
+    if (k?.pegawai && !String(k.pegawai).includes(',')) candidateNames.add(k.pegawai);
+  });
+
+  const stopWords = new Set([
+    'cari', 'nama', 'pegawai', 'petugas', 'atas', 'tanggal', 'tgl', 'bulan', 'tahun',
+    'centang', 'ceklis', 'ceklist', 'checklist', 'semua', 'semuanya', 'fix', 'lengkap',
+    'lengkapkan', 'bikin', 'buat', 'ubah', 'jadi', 'status', 'spj', 'berkas', 'poa',
+    'kegiatan', 'program', 'dinas', 'jadwal', 'yang', 'dan', 'atau', 'untuk', 'pada',
+    'เช็ค', 'cek', 'tolong', 'bantu', 'verifikasi', 'selesaikan', 'bereskan', 'acc',
+    'ners', 'skep', 'skm', 'amdkeb', 'amdkep', 'amdgz', 'amdkl', 'sfarm', 'apt', 'mkes',
+    'januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus',
+    'september', 'oktober', 'november', 'desember'
+  ]);
+
+  let bestName = null;
+  let bestScore = 0;
+
+  for (const fullName of candidateNames) {
+    const cleanFull = String(fullName)
+      .toLowerCase()
+      .replace(/[.,]/g, ' ')
+      .replace(/\b(dr|drg|ns|ners|ny|tn|hj|h|s|kep|tr|keb|kes|km|skm|amd|a|md|ak|gz|kl|farm|apt|m)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!cleanFull) continue;
+    if (q.includes(cleanFull) && cleanFull.length >= 3) {
+      const score = cleanFull.length + 100;
+      if (score > bestScore) {
+        bestScore = score;
+        bestName = fullName;
+      }
+      continue;
+    }
+
+    const tokens = cleanFull.split(/\s+/).filter((t) => t.length >= 3 && !stopWords.has(t));
+    let matchedTokens = 0;
+    let tokenLenSum = 0;
+    for (const tk of tokens) {
+      const tkRegex = new RegExp(`\\b${tk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
+      if (tkRegex.test(q)) {
+        matchedTokens++;
+        tokenLenSum += tk.length;
+      }
+    }
+    if (matchedTokens > 0) {
+      const score = matchedTokens * 25 + tokenLenSum;
+      if (score > bestScore) {
+        bestScore = score;
+        bestName = fullName;
+      }
+    }
+  }
+
+  return bestName;
 }
 
 // Compute Smart Audit & Conflict Detection across Kegiatan, SPJ, Pegawai, and Jadwal Pelayanan
@@ -252,35 +512,48 @@ function generateLocalAgentResponse(prompt, audit, contextData) {
   const activeUserName = getActiveUserName(activeUser) || 'Pegawai';
   const canSeeAll = canRoleViewAllData(activeRole);
 
-  // 1. Check if user is asking about a specific employee by name
-  if (canSeeAll && pegawaiList.length > 0 && q !== 'ringkasan') {
-    const matchedEmp = pegawaiList.find((p) => {
-      if (!p.nama) return false;
-      const parts = String(p.nama)
-        .toLowerCase()
-        .replace(/[.,]/g, ' ')
-        .split(/\s+/)
-        .filter((w) => w.length >= 4 && !['ners', 'skep', 'skm', 'amdkeb', 'amdkep'].includes(w));
-      return parts.some((part) => q.includes(part));
-    });
+  // 1. Check if user is asking about a specific employee by name (with optional date/month filter)
+  if (canSeeAll && q !== 'ringkasan') {
+    const matchedEmpName = matchEmployeeFromQuery(prompt, { pegawaiList, spjList, kegiatanList });
+    if (matchedEmpName) {
+      const dateFilter = parseDateFilterFromQuery(prompt);
+      const targetEntries = findTargetEntriesForEmployee(matchedEmpName, dateFilter, {
+        pegawaiList,
+        spjList,
+        kegiatanList
+      });
 
-    if (matchedEmp) {
-      const empSpj = (spjList || []).filter((s) => isSameEmployeeName(s.pegawaiNama, matchedEmp.nama));
-      const empLengkap = empSpj.filter((s) => (s.statusVerifikasi || s.status) === 'Lengkap');
-      const empPending = empSpj.filter((s) => (s.statusVerifikasi || s.status) !== 'Lengkap');
-      const empConflicts = audit.conflicts.filter((c) => isSameEmployeeName(c.pegawai, matchedEmp.nama));
-      const pendingLines = empPending
-        .slice(0, 5)
-        .map((s, idx) => `  ${idx + 1}. ${s.kegiatan || s.program || 'Kegiatan BOK'} (${s.tanggal || '-'}) — ${s.statusVerifikasi || s.status || 'Belum Lengkap'}`)
+      const empObj = (pegawaiList || []).find((p) => isSameEmployeeName(p.nama, matchedEmpName));
+      const entryLines = targetEntries
+        .slice(0, 8)
+        .map((s, idx) => {
+          const st =
+            typeof resolveSpjStatus === 'function'
+              ? resolveSpjStatus(s)
+              : s.statusVerifikasi || s.status || (s.isVirtual ? 'Belum Diperiksa' : 'Belum Lengkap');
+          return `  ${idx + 1}. ${s.tanggal || '-'} — ${s.kegiatan || s.program || 'Kegiatan BOK'} [${st}]`;
+        })
         .join('\n');
 
+      if (targetEntries.length === 0) {
+        return {
+          reply: `🔍 Pencarian Pegawai: ${matchedEmpName} (${dateFilter.label})\nTidak ditemukan penugasan POA maupun berkas SPJ untuk ${matchedEmpName} pada ${dateFilter.label}.`,
+          actionType: 'NAVIGATE_TAB',
+          actionLabel: 'Buka Verifikasi SPJ',
+          targetTab: 'verifikasi-spj'
+        };
+      }
+
       return {
-        reply: `📋 Profil & Audit Pegawai: ${matchedEmp.nama}\n• NIP/Jabatan: ${matchedEmp.nip || '-'} / ${matchedEmp.jabatan || '-'}\n• Total Penugasan SPJ: ${empSpj.length} kegiatan (${empLengkap.length} Lengkap, ${empPending.length} Belum Lengkap)\n• Konflik/Bentrok Jadwal: ${empConflicts.length} temuan${
-          empPending.length > 0 ? `\n\nBerkas Belum Lengkap:\n${pendingLines}` : '\n\nSeluruh berkas SPJ pegawai ini sudah Lengkap!'
-        }`,
-        actionType: empPending.length > 0 ? 'GENERATE_WA_REMINDERS' : 'NAVIGATE_TAB',
-        actionLabel: empPending.length > 0 ? 'Kirim Pengingat WA' : 'Lihat Hasil Verifikasi',
-        targetTab: 'hasil-verifikasi'
+        reply: `📋 Ditemukan ${targetEntries.length} berkas/penugasan untuk **${matchedEmpName}** pada **${dateFilter.label}**:\n• NIP/Jabatan: ${empObj?.nip || '-'} / ${empObj?.jabatan || '-'}\n\nRincian Berkas:\n${entryLines}${
+          targetEntries.length > 8 ? `\n  ...dan ${targetEntries.length - 8} berkas lainnya.` : ''
+        }\n\n💡 Anda dapat langsung klik tombol di bawah untuk mencentang semua (Fix Semua menjadi Lengkap) atau ketik: "centang semua ${matchedEmpName} ${dateFilter.type !== 'ALL' ? dateFilter.label : ''}".`,
+        actionType: 'FIX_TARGET_ENTRIES',
+        actionLabel: `✅ Centang Semua / Fix Semua (${targetEntries.length} Berkas)`,
+        targetEntries,
+        targetEmployee: matchedEmpName,
+        targetDateLabel: dateFilter.label,
+        targetTab: 'verifikasi-spj'
       };
     }
   }
@@ -678,6 +951,107 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
     [kegiatanList, spjList, pegawaiList, jadwalStore, activeRole, activeUserName]
   );
 
+  const handleFixTargetEntries = async (targetEntries, targetEmployee, targetDateLabel, uncheck = false) => {
+    if (!canSeeAll) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: '🔒 Maaf, perintah perubahan ceklist berkas SPJ hanya dapat dijalankan oleh Admin.',
+          actionType: 'NONE',
+          source: 'Sistem Keamanan'
+        }
+      ]);
+      return;
+    }
+    if (!Array.isArray(targetEntries) || targetEntries.length === 0) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: `⚠️ Tidak ditemukan berkas atau jadwal POA untuk ${targetEmployee || 'pegawai tersebut'} pada ${targetDateLabel || 'tanggal yang dimaksud'}.`,
+          actionType: 'NAVIGATE_TAB',
+          actionLabel: 'Buka Verifikasi SPJ',
+          targetTab: 'verifikasi-spj',
+          source: 'Aksi Otomatis AI Agent'
+        }
+      ]);
+      return;
+    }
+
+    setIsThinking(true);
+    try {
+      const checklistPayload = uncheck ? { ...FULL_CHECKLIST_FALSE } : { ...FULL_CHECKLIST_TRUE };
+      let updatedCount = 0;
+
+      for (const item of targetEntries) {
+        if (item.isVirtual || String(item.id || '').startsWith('virtual_')) {
+          await simpanSpjDb({
+            kegiatanId: item.kegiatanId || '',
+            kegiatan: item.kegiatan || '',
+            pegawaiNama: item.pegawaiNama,
+            tanggal: item.tanggal,
+            program: item.program || '(Umum)',
+            anggaran: Number(item.anggaran) || 0,
+            pemeriksa: activeUserName || 'Admin',
+            checklist: checklistPayload,
+            catatan: ''
+          });
+          updatedCount++;
+        } else if (item.id) {
+          await updateSpjDb(item.id, {
+            pemeriksa: activeUserName || 'Admin',
+            checklist: checklistPayload,
+            catatan: ''
+          });
+          updatedCount++;
+        }
+      }
+
+      // Reload fresh SPJ list so UI and audit reflect changes immediately
+      const freshSpjSnap = await getDocs(collection(db, 'spj'));
+      const freshSpjArr = freshSpjSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setSpjList(freshSpjArr);
+      window.dispatchEvent(new Event('spjDataChanged'));
+
+      const detailList = targetEntries
+        .slice(0, 8)
+        .map((it, idx) => `  ${idx + 1}. ${it.tanggal} — ${it.kegiatan || it.program || 'Kegiatan BOK'} → ${uncheck ? 'Direset' : '✅ Lengkap (8/8 Ceklist)'}`)
+        .join('\n');
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: `${uncheck ? '🔄' : '✅'} **Berhasil dieksekusi!** Sebanyak **${updatedCount} berkas SPJ** atas nama **${targetEmployee}** (${targetDateLabel}) telah otomatis ${
+            uncheck ? 'dibatalkan centangnya' : 'dicentang semua (Fix Semua → Status: LENGKAP)'
+          }:\n\n${detailList}${
+            targetEntries.length > 8 ? `\n  ...dan ${targetEntries.length - 8} berkas lainnya.` : ''
+          }`,
+          actionType: 'NAVIGATE_TAB',
+          actionLabel: 'Lihat di Verifikasi SPJ',
+          targetTab: 'verifikasi-spj',
+          source: 'Eksekusi Pintar AI Agent'
+        }
+      ]);
+    } catch (err) {
+      console.error('Gagal mengeksekusi perintah centang semua:', err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          text: `❌ Terjadi kendala saat menyimpan perubahan berkas: ${err?.message || 'Silakan coba lagi.'}`,
+          actionType: 'NAVIGATE_TAB',
+          actionLabel: 'Buka Verifikasi SPJ',
+          targetTab: 'verifikasi-spj',
+          source: 'Aksi Otomatis AI Agent'
+        }
+      ]);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
   const handleBatchVerify = async () => {
     if (!canSeeAll || audit.readyForBatchVerify.length === 0) {
       onNavigateTab('verifikasi-spj');
@@ -704,6 +1078,7 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
             : s
         )
       );
+      window.dispatchEvent(new Event('spjDataChanged'));
       setMessages((prev) => [
         ...prev,
         {
@@ -730,6 +1105,28 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
     setIsThinking(true);
 
     try {
+      // Check if user is issuing a direct execution command: e.g. "cari nama A tanggal sekian dan centang semuanya (fix semua)"
+      const qLower = queryText.toLowerCase();
+      const hasFixIntent =
+        /\b(centang|ceklis|ceklist|checklist|fix|lengkapkan|bikin\s+lengkap|verifikasi\s+semua|bereskan|selesaikan|acc)\b/i.test(
+          qLower
+        );
+      const hasUncheckIntent = /\b(batal\s+centang|uncheck|reset\s+ceklis|kosongkan\s+ceklis)\b/i.test(qLower);
+
+      if (hasFixIntent || hasUncheckIntent) {
+        const matchedEmpName = matchEmployeeFromQuery(queryText, { pegawaiList, spjList, kegiatanList });
+        if (matchedEmpName) {
+          const dateFilter = parseDateFilterFromQuery(queryText);
+          const targetEntries = findTargetEntriesForEmployee(matchedEmpName, dateFilter, {
+            pegawaiList,
+            spjList,
+            kegiatanList
+          });
+          await handleFixTargetEntries(targetEntries, matchedEmpName, dateFilter.label, hasUncheckIntent);
+          return;
+        }
+      }
+
       const contextSummary = {
         penggunaAktif: activeUserName,
         peran: activeRole,
@@ -747,8 +1144,13 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
         }))
       };
 
+      // If the user is asking about a specific employee name, prioritize our local precision engine so it returns exact records & 1-click Fix button
+      const matchedEmpForSearch = canSeeAll
+        ? matchEmployeeFromQuery(queryText, { pegawaiList, spjList, kegiatanList })
+        : null;
+
       let replyObj = null;
-      if (navigator.onLine) {
+      if (!matchedEmpForSearch && navigator.onLine) {
         try {
           const res = await fetch('/api/agent', {
             method: 'POST',
@@ -799,6 +1201,9 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
           actionType: replyObj.actionType,
           actionLabel: replyObj.actionLabel,
           targetTab: replyObj.targetTab,
+          targetEntries: replyObj.targetEntries,
+          targetEmployee: replyObj.targetEmployee,
+          targetDateLabel: replyObj.targetDateLabel,
           source: replyObj.source
         }
       ]);
@@ -855,7 +1260,7 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
                     jsx('p', {
                       className: 'text-xs text-slate-300',
                       children:
-                        'Audit konflik jadwal, pengingat WA SPJ otomatis, dan asisten operasional Puskesmas Silian (Online & Offline)'
+                        'Eksekusi perintah langsung ("Cari nama A tanggal X dan centang semua"), audit konflik, & pengingat WA'
                     })
                   ]
                 })
@@ -1021,6 +1426,13 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
                                       setShowWaPanel(true);
                                     } else if (m.actionType === 'BATCH_VERIFY_SPJ') {
                                       handleBatchVerify();
+                                    } else if (m.actionType === 'FIX_TARGET_ENTRIES') {
+                                      handleFixTargetEntries(
+                                        m.targetEntries || [],
+                                        m.targetEmployee || 'Pegawai',
+                                        m.targetDateLabel || 'Semua Tanggal',
+                                        false
+                                      );
                                     } else if (m.targetTab) {
                                       onNavigateTab(m.targetTab);
                                     }
@@ -1057,7 +1469,7 @@ function AiAgentModal({ activeRole, activeUser, onClose, onNavigateTab }) {
               value: prompt,
               onChange: (e) => setPrompt(e.target.value),
               placeholder: canSeeAll
-                ? 'Tanyakan ke AI Agent (misal: Cek jadwal bentrok, Siapa yang belum kumpul SPJ?)...'
+                ? 'Ketik perintah (misal: Cari nama [Pegawai] tanggal 15 Maret dan centang semuanya)...'
                 : 'Tanyakan ke AI Agent tentang jadwal atau status SPJ pribadi Anda...',
               className:
                 'flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500'
